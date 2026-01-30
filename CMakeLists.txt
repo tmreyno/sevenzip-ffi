@@ -72,14 +72,12 @@ set(FFI_SOURCES
     src/archive_create.c
     src/archive_create_custom.c
     src/archive_create_multivolume.c
-    src/archive_multivolume_legacy.c
     src/archive_extract.c
     src/archive_extract_custom.c
     src/archive_extract_split.c
     src/archive_list.c
     src/archive_test.c
     src/archive_stream_api.c
-    src/archive_stream_impl.c
     
     # Compression
     src/lzma_compress.c
