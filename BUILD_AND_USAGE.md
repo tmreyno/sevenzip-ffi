@@ -66,14 +66,14 @@ int main() {
 #### Option A: From Local Path
 ```toml
 [dependencies]
-seven-zip = { path = "/path/to/7z-ffi-sdk/rust" }
+seven-zip = { path = "/path/to/sevenzip-ffi/rust" }
 ```
 
 #### Option B: Copy to Your Project
 ```bash
 # Copy the rust directory to your project
-cp -r /path/to/7z-ffi-sdk/rust ./seven-zip
-cp -r /path/to/7z-ffi-sdk/build ./seven-zip/
+cp -r /path/to/sevenzip-ffi/rust ./seven-zip
+cp -r /path/to/sevenzip-ffi/build ./seven-zip/
 ```
 
 Then in `Cargo.toml`:
@@ -176,7 +176,7 @@ fn advanced_usage() -> Result<(), Box<dyn std::error::Error>> {
 
 ### C Examples
 ```bash
-cd /path/to/7z-ffi-sdk
+cd /path/to/sevenzip-ffi
 
 # Forensic archiver
 ./build/examples/forensic_archiver compress output.7z /path/to/files --password
@@ -190,7 +190,7 @@ cd /path/to/7z-ffi-sdk
 
 ### Rust Examples
 ```bash
-cd /path/to/7z-ffi-sdk/rust
+cd /path/to/sevenzip-ffi/rust
 
 # Feature demonstration (all features)
 cargo run --release --example feature_demo
@@ -209,14 +209,14 @@ cargo run --release --example demo
 
 ### C Tests
 ```bash
-cd /path/to/7z-ffi-sdk
+cd /path/to/sevenzip-ffi
 ./build/tests/test_compress
 ./build/tests/test_extract
 ```
 
 ### Rust Tests
 ```bash
-cd /path/to/7z-ffi-sdk/rust
+cd /path/to/sevenzip-ffi/rust
 
 # All tests
 cargo test --release
@@ -233,7 +233,7 @@ cargo test --release --test integration_tests
 ### Creating a Release Package
 
 ```bash
-cd /path/to/7z-ffi-sdk
+cd /path/to/sevenzip-ffi
 
 # Create distribution directory
 mkdir -p dist/lib dist/include dist/examples
@@ -252,15 +252,15 @@ cp build/examples/test_encryption dist/examples/
 cp -r rust dist/
 
 # Create archive
-tar czf 7z-ffi-sdk-v1.2.0-macos-arm64.tar.gz dist/
+tar czf sevenzip-ffi-v1.2.0-macos-arm64.tar.gz dist/
 ```
 
 ### Using in Another Rust Project
 
 1. **Copy the crate**:
    ```bash
-   cp -r /path/to/7z-ffi-sdk/rust /your/project/deps/seven-zip
-   cp -r /path/to/7z-ffi-sdk/build /your/project/deps/seven-zip/
+   cp -r /path/to/sevenzip-ffi/rust /your/project/deps/seven-zip
+   cp -r /path/to/sevenzip-ffi/build /your/project/deps/seven-zip/
    ```
 
 2. **Add to Cargo.toml**:

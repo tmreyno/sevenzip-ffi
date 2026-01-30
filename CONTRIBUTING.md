@@ -79,7 +79,7 @@ sudo dnf install cmake p7zip gcc-c++
 ```bash
 # Clone the repository
 git clone <repository-url>
-cd 7z-ffi-sdk
+cd sevenzip-ffi
 
 # Download LZMA SDK
 ./setup_lzma.sh
@@ -317,7 +317,7 @@ We aim for:
 ### Project Structure
 
 ```
-7z-ffi-sdk/
+sevenzip-ffi/
 ├── include/          # Public headers only
 ├── src/              # Implementation files
 ├── lzma/             # LZMA SDK (external)
@@ -418,4 +418,4 @@ By contributing to this project, you agree that your contributions will be licen
 
 **Questions?** Open an issue with the "question" label or start a discussion.
 
-**Ready to contribute?** Check out the [good first issues](https://github.com/tmreyno/7z-ffi-sdk/labels/good%20first%20issue)!
+**Ready to contribute?** Check out the [good first issues](https://github.com/tmreyno/sevenzip-ffi/labels/good%20first%20issue)!

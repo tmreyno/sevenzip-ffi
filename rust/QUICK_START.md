@@ -11,8 +11,8 @@ Use this checklist to quickly integrate the 7z FFI SDK Rust bindings into your p
 ## ✅ Build C Library (One-Time Setup)
 
 ```bash
-# From project root (7z-ffi-sdk/)
-cd /path/to/7z-ffi-sdk
+# From project root (sevenzip-ffi/)
+cd /path/to/sevenzip-ffi
 
 # Configure
 cmake -B build -DCMAKE_BUILD_TYPE=Release
@@ -34,7 +34,7 @@ ls build/src/lib7z_ffi.*
 ```toml
 # Your Cargo.toml
 [dependencies]
-seven-zip = { path = "/path/to/7z-ffi-sdk/rust" }
+seven-zip = { path = "/path/to/sevenzip-ffi/rust" }
 ```
 
 ### Option B: Configure Library Path
@@ -43,20 +43,20 @@ Create `.cargo/config.toml` in your project:
 
 ```toml
 [build]
-rustflags = ["-L", "/path/to/7z-ffi-sdk/build/src"]
+rustflags = ["-L", "/path/to/sevenzip-ffi/build/src"]
 ```
 
 **OR** set environment variable:
 
 ```bash
 # macOS
-export DYLD_LIBRARY_PATH=/path/to/7z-ffi-sdk/build/src:$DYLD_LIBRARY_PATH
+export DYLD_LIBRARY_PATH=/path/to/sevenzip-ffi/build/src:$DYLD_LIBRARY_PATH
 
 # Linux
-export LD_LIBRARY_PATH=/path/to/7z-ffi-sdk/build/src:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/path/to/sevenzip-ffi/build/src:$LD_LIBRARY_PATH
 
 # Windows
-set PATH=C:\path\to\7z-ffi-sdk\build\src\Release;%PATH%
+set PATH=C:\path\to\sevenzip-ffi\build\src\Release;%PATH%
 ```
 
 ## ✅ Test Installation
@@ -225,7 +225,7 @@ cargo run --release
 ### Run Complete Demo
 
 ```bash
-cd /path/to/7z-ffi-sdk/rust
+cd /path/to/sevenzip-ffi/rust
 cargo run --example complete_demo
 ```
 

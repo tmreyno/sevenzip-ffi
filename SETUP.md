@@ -21,7 +21,7 @@ Before building the 7z FFI SDK, you need to download the LZMA SDK from 7-Zip.
 
    Your directory structure should look like:
    ```
-   7z-ffi-sdk/
+   sevenzip-ffi/
    ├── lzma/
    │   └── C/
    │       ├── 7z.h

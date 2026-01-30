@@ -25,7 +25,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-seven-zip = { path = "path/to/7z-ffi-sdk/rust" }
+seven-zip = { path = "path/to/sevenzip-ffi/rust" }
 ```
 
 ### Build Requirements
@@ -228,7 +228,7 @@ The build system automatically detects your platform and configures accordingly.
 └──────────┬──────────┘
            │ FFI
 ┌──────────▼──────────┐
-│  7z-ffi-sdk (C)     │
+│  sevenzip-ffi (C)     │
 │  CMake Library      │
 └──────────┬──────────┘
            │
@@ -305,7 +305,7 @@ This project includes the LZMA SDK which is in the public domain. The Rust wrapp
 
 ## Links
 
-- [GitHub Repository](https://github.com/tmreyno/7z-ffi-sdk)
+- [GitHub Repository](https://github.com/tmreyno/sevenzip-ffi)
 - [LZMA SDK](https://www.7-zip.org/sdk.html)
 - [7-Zip](https://www.7-zip.org/)
 

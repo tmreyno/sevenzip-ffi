@@ -400,7 +400,7 @@ Contributions are welcome! Please:
 - [7-Zip Homepage](https://www.7-zip.org/)
 - [LZMA SDK](https://www.7-zip.org/sdk.html)
 - [Rust Documentation](https://docs.rs/seven-zip)
-- [GitHub Repository](https://github.com/yourusername/7z-ffi-sdk)
+- [GitHub Repository](https://github.com/yourusername/sevenzip-ffi)
 
 ## Status
 

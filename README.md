@@ -59,7 +59,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-seven-zip = { path = "path/to/7z-ffi-sdk/rust" }
+seven-zip = { path = "path/to/sevenzip-ffi/rust" }
 ```
 
 Example:

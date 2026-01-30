@@ -7,7 +7,7 @@ This guide shows how to integrate the 7z FFI SDK into your Tauri application.
 ### Step 1: Build the Library
 
 ```bash
-cd 7z-ffi-sdk
+cd sevenzip-ffi
 mkdir build && cd build
 cmake ..
 cmake --build . --config Release

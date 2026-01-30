@@ -63,8 +63,8 @@ Complete guide to building and using the 7z FFI SDK Rust bindings.
 ### Step 1: Clone Repository
 
 ```bash
-git clone https://github.com/yourusername/7z-ffi-sdk.git
-cd 7z-ffi-sdk
+git clone https://github.com/yourusername/sevenzip-ffi.git
+cd sevenzip-ffi
 ```
 
 ### Step 2: Build C Library
@@ -117,7 +117,7 @@ cargo run --example encryption_example
 
 ### Method 1: Direct Dependency (Recommended for Development)
 
-If you're developing within the 7z-ffi-sdk repository:
+If you're developing within the sevenzip-ffi repository:
 
 ```toml
 # Your Cargo.toml
@@ -129,7 +129,7 @@ seven-zip = { path = "../rust" }
 
 ```toml
 [dependencies]
-seven-zip = { git = "https://github.com/yourusername/7z-ffi-sdk", branch = "main" }
+seven-zip = { git = "https://github.com/yourusername/sevenzip-ffi", branch = "main" }
 ```
 
 ### Method 3: Published Crate (Future)
@@ -145,7 +145,7 @@ seven-zip = "1.2.0"
 
 ```toml
 [dependencies]
-seven-zip = { path = "/path/to/7z-ffi-sdk/rust" }
+seven-zip = { path = "/path/to/sevenzip-ffi/rust" }
 ```
 
 ## Linking Configuration
@@ -177,8 +177,8 @@ Set environment variables before building:
 
 ```bash
 # macOS/Linux
-export DYLD_LIBRARY_PATH=/path/to/7z-ffi-sdk/build/src:$DYLD_LIBRARY_PATH  # macOS
-export LD_LIBRARY_PATH=/path/to/7z-ffi-sdk/build/src:$LD_LIBRARY_PATH      # Linux
+export DYLD_LIBRARY_PATH=/path/to/sevenzip-ffi/build/src:$DYLD_LIBRARY_PATH  # macOS
+export LD_LIBRARY_PATH=/path/to/sevenzip-ffi/build/src:$LD_LIBRARY_PATH      # Linux
 
 # Build
 cd rust
@@ -625,7 +625,7 @@ jobs:
 
 ## Support
 
-- GitHub Issues: https://github.com/yourusername/7z-ffi-sdk/issues
+- GitHub Issues: https://github.com/yourusername/sevenzip-ffi/issues
 - Documentation: https://docs.rs/seven-zip
 - Examples: `/rust/examples/`
 

@@ -11,7 +11,7 @@ The library has been successfully built and tested on macOS with Apple Silicon (
 ### 1. Download and Setup
 
 ```bash
-cd /path/to/7z-ffi-sdk
+cd /path/to/sevenzip-ffi
 ./setup_lzma.sh
 ```
 
