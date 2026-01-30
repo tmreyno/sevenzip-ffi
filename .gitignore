@@ -3,6 +3,8 @@ build/
 cmake-build-*/
 bin/
 lib/
+target/
+dist/
 
 # IDE files
 .vscode/
@@ -25,9 +27,16 @@ CMakeFiles/
 cmake_install.cmake
 Makefile
 
+# Rust
+Cargo.lock
+
 # Test files
 test_archive.7z
 test_output/
+test_*.7z
+dummy.7z
+test_*.rs
+tests/
 
 # macOS
 .DS_Store
