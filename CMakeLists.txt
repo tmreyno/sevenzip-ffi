@@ -62,24 +62,31 @@ set(LZMA_SOURCES
     lzma/C/XzIn.c
 )
 
-# FFI wrapper source files
+# FFI wrapper source files (organized by function)
 set(FFI_SOURCES
-    src/7z_ffi.c
-    src/7z_extract.c
-    src/7z_compress.c
-    src/7z_decompress.c
-    src/7z_create_archive.c
-    src/7z_extract_archive.c
-    src/7z_create.c
-    src/7z_list.c
-    src/7z_stream.c
-    src/7z_stream_full.c
-    src/7z_extract_split.c
-    src/7z_multivolume.c
-    src/7z_multivolume_complete.c
-    src/7z_encryption.c
-    src/7z_error_reporting.c
-    src/7z_test.c
+    # Core API
+    src/ffi_interface.c
+    src/error_reporting.c
+    
+    # Archive operations
+    src/archive_create.c
+    src/archive_create_custom.c
+    src/archive_create_multivolume.c
+    src/archive_multivolume_legacy.c
+    src/archive_extract.c
+    src/archive_extract_custom.c
+    src/archive_extract_split.c
+    src/archive_list.c
+    src/archive_test.c
+    src/archive_stream_api.c
+    src/archive_stream_impl.c
+    
+    # Compression
+    src/lzma_compress.c
+    src/lzma_decompress.c
+    
+    # Security
+    src/encryption_aes.c
 )
 
 # Create the library

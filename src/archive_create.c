@@ -435,7 +435,9 @@ static SevenZipErrorCode compress_all_files(
     
     /* ADAPTIVE COMPRESSION: Check if data is compressible */
     /* For large data (>1MB), if it looks like random/encrypted data, use Copy codec */
-    if (total_input_size > 1024 * 1024 && !is_data_compressible(combined, total_input_size)) {
+    /* Also use Copy codec if explicitly requested (Store mode) */
+    if (builder->use_copy_codec || 
+        (total_input_size > 1024 * 1024 && !is_data_compressible(combined, total_input_size))) {
         /* Use Copy codec - return raw data directly (fastest possible) */
         builder->use_copy_codec = 1;
         builder->lzma2_prop_byte = 0;  /* Not used for Copy codec */
@@ -847,6 +849,7 @@ SevenZipErrorCode sevenzip_create_7z(
     
     switch (level) {
         case SEVENZIP_LEVEL_STORE:
+            builder.use_copy_codec = 1;  /* Use Copy codec for Store mode */
             builder.props.lzmaProps.level = 0;
             builder.props.lzmaProps.dictSize = opts->dict_size > 0 ? opts->dict_size : (1 << 16);
             break;

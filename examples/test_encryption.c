@@ -2,7 +2,7 @@
  * Test program for 7z encryption functionality
  */
 
-#include "7z_encryption.h"
+#include "encryption_aes.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
