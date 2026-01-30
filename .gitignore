@@ -7,13 +7,13 @@ target/
 dist/
 lzma_test/
 
-
 # IDE files
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+*.code-workspace
 
 # Compiled files
 *.o
@@ -38,7 +38,15 @@ test_output/
 test_*.7z
 dummy.7z
 test_*.rs
-tests/
+
+# Demo/test scripts (not needed for building)
+demo.sh
+demo_rust_crate.sh
+forensic_archiver_encrypted.sh
+test_encryption_e2e.sh
+
+# Tauri integration docs (optional)
+tauri/
 
 # macOS
 .DS_Store
