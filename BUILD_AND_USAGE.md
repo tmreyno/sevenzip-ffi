@@ -3,16 +3,18 @@
 ## Built Libraries
 
 ### C Library
+
 - **Location**: `build/lib7z_ffi.a`
-- **Size**: 312 KB (static library)
+- **Size**: ~312 KB (static library)
 - **Format**: Static library for macOS ARM64
-- **Dependencies**: OpenSSL (libcrypto), pthread
+- **Dependencies**: pthread
 
 ### Rust Crate
+
 - **Location**: `rust/target/release/libseven_zip.rlib`
-- **Size**: 546 KB
+- **Size**: ~546 KB
 - **Format**: Rust library
-- **Version**: 1.2.0
+- **Version**: 1.3.0
 
 ## Using the C Library
 
@@ -275,16 +277,17 @@ tar czf 7z-ffi-sdk-v1.2.0-macos-arm64.tar.gz dist/
 ## System Requirements
 
 ### Runtime Dependencies
-- **OpenSSL**: libcrypto (for AES-256 encryption)
-- **pthread**: For thread-safe error reporting
+
+- **pthread**: For thread-safe operations
 
 ### Build Dependencies
+
 - **CMake**: 3.10 or higher
 - **C Compiler**: GCC, Clang, or MSVC
 - **Rust**: 1.70 or higher (for Rust crate)
-- **OpenSSL development files**
 
 ### Platform Support
+
 - ✅ macOS (ARM64 and x86_64)
 - ✅ Linux (glibc-based)
 - ✅ Windows (MSVC toolchain)

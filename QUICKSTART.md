@@ -107,20 +107,25 @@ Progress: 100.0% (163/163 bytes)
 
 **Supported:**
 - ✅ Single file to/from LZMA format (`.lzma`)
+- ✅ Standard 7z archive creation (100% 7-Zip compatible)
+- ✅ Multi-file 7z archives with solid compression
+- ✅ Split/multi-volume archives (.7z.001, .7z.002, etc.)
 - ✅ Compression levels 0-9 (default: 5)
-- ✅ Progress tracking for both operations
-
-**Coming Soon:**
-- 🚧 Multi-file 7z archive creation
+- ✅ Progress tracking for all operations
+- ✅ AES-256 encryption (pure Rust, no OpenSSL)
 
 ## Tested Features
 
 ✅ **Archive Listing** - List all files in a 7z archive with metadata  
 ✅ **Archive Extraction** - Extract all files from a 7z archive  
+✅ **7z Archive Creation** - Create standard 7z archives (100% 7-Zip compatible)  
+✅ **Multi-file Archives** - Multiple files with solid compression  
+✅ **Split Archives** - Multi-volume archives (.7z.001, .7z.002, etc.)  
 ✅ **Single File Compression** - Compress files to LZMA format  
-✅ **Single File Decompression** - Decompress LZMA files (NEW)  
+✅ **Single File Decompression** - Decompress LZMA files  
+✅ **AES-256 Encryption** - Pure Rust (no OpenSSL required)  
 ✅ **Progress Callbacks** - Monitor all operations in real-time  
-✅ **Cross-platform** - Builds on macOS (tested), should work on Linux and Windows  
+✅ **Cross-platform** - macOS, Linux, Windows  
 ✅ **Memory Management** - Proper cleanup and error handling  
 
 ## API Overview

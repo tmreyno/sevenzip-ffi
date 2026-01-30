@@ -368,10 +368,9 @@ We aim for:
 
 Currently looking for help with:
 
-1. **Compression Implementation** (HIGH PRIORITY)
-   - Integrate LZMA encoder
-   - File system traversal
-   - Archive creation
+1. **Additional Format Support**
+   - ZIP, TAR, XZ format support
+   - Format auto-detection
 
 2. **Cross-Platform Testing**
    - Windows builds and testing
@@ -383,14 +382,8 @@ Currently looking for help with:
    - Video tutorials
    - Best practices guide
 
-4. **Testing**
-   - Unit test framework
-   - Integration tests
-   - Performance benchmarks
-
-5. **Performance**
+4. **Performance**
    - Profiling and optimization
-   - Multi-threading support
    - Memory usage improvements
 
 ## 📋 Checklist for Maintainers
@@ -425,4 +418,4 @@ By contributing to this project, you agree that your contributions will be licen
 
 **Questions?** Open an issue with the "question" label or start a discussion.
 
-**Ready to contribute?** Check out the [good first issues](https://github.com/yourorg/7z-ffi-sdk/labels/good%20first%20issue)!
+**Ready to contribute?** Check out the [good first issues](https://github.com/tmreyno/7z-ffi-sdk/labels/good%20first%20issue)!

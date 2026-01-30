@@ -150,13 +150,13 @@ See `include/7z_ffi.h` for the complete API documentation.
 
 ## Documentation
 
-- **[QUICK_START_FORENSICS.md](QUICK_START_FORENSICS.md)** - 🚀 **START HERE!** Quick guide to compress 82GB evidence
-- **[PRODUCTION_STREAMING.md](PRODUCTION_STREAMING.md)** - Complete streaming compression documentation
-- **[STREAMING_COMPRESSION.md](STREAMING_COMPRESSION.md)** - Streaming API reference and examples
-- **[ADVANCED_FEATURES.md](ADVANCED_FEATURES.md)** - Multi-threading, custom options, directory support
+- **[QUICKSTART.md](QUICKSTART.md)** - Getting started guide
+- **[ADVANCED_FEATURES.md](ADVANCED_FEATURES.md)** - Multi-threading, encryption, split archives
+- **[LARGE_FILES_GUIDE.md](LARGE_FILES_GUIDE.md)** - 100GB+ file compression
+- **[MEMORY_SAFETY.md](MEMORY_SAFETY.md)** - Memory-safe streaming API
 - **[README-rust.md](README-rust.md)** - Rust crate documentation
-- **[STATUS.md](STATUS.md)** - Current project status
-- **[TODO.md](TODO.md)** - Roadmap and future features
+- **[BUILD_AND_USAGE.md](BUILD_AND_USAGE.md)** - Build and usage instructions
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - How to contribute
 
 ## License
 

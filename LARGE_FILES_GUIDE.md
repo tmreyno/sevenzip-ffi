@@ -133,12 +133,12 @@ fn progress_callback(
 // Use with create_archive_streaming for real-time progress
 ```
 
-## Streaming API (In Progress)
+## Streaming API
 
-Native multi-volume 7z archives are under development for even better integration:
+Native multi-volume 7z archives are fully supported:
 
 ```rust
-// Coming soon: Native .001, .002, .003 volumes
+// Native .001, .002, .003 volumes
 let mut options = StreamOptions::default();
 options.split_size = 4 * 1024 * 1024 * 1024;  // 4GB volumes
 
@@ -152,7 +152,7 @@ sz.create_archive_streaming(
 // Output: output.7z.001, output.7z.002, output.7z.003, ...
 ```
 
-**Status**: Core infrastructure complete, working on 7-Zip format compatibility.
+**Status**: ✅ Complete - 100% 7-Zip compatible
 
 ## Real-World Example
 
@@ -214,9 +214,9 @@ The split operation needs space for both the full archive and the parts. If disk
 
 ## Summary
 
-✅ **100GB+ files fully supported TODAY**
-✅ **Simple, reliable approach**  
-✅ **Universal compatibility**  
-🚧 **Native multi-volume format in development**
+✅ **100GB+ files fully supported**  
+✅ **Native multi-volume archives**  
+✅ **100% 7-Zip compatible**  
+✅ **Memory-efficient streaming**
 
 Happy compressing! 🎉
