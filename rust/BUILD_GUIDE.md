@@ -416,7 +416,7 @@ cargo bench
 
 ### macOS (ARM64 - M1/M2)
 
-- AES-NI hardware acceleration: ✅ Supported
+- AES-NI hardware acceleration: Supported
 - Build flags: No special flags needed
 - Library location: `build/src/lib7z_ffi.dylib`
 
@@ -427,7 +427,7 @@ export DYLD_LIBRARY_PATH=$PWD/build/src:$DYLD_LIBRARY_PATH
 
 ### Linux (x86_64)
 
-- AES-NI hardware acceleration: ✅ Supported
+- AES-NI hardware acceleration: Supported
 - Build flags: May need `-lcrypto` if using system OpenSSL
 - Library location: `build/src/lib7z_ffi.so`
 
@@ -441,7 +441,7 @@ grep aes /proc/cpuinfo
 
 ### Windows (x86_64)
 
-- AES-NI hardware acceleration: ✅ Supported
+- AES-NI hardware acceleration: Supported
 - Build with Visual Studio 2019+
 - Library location: `build\src\Release\7z_ffi.dll`
 

@@ -1,8 +1,6 @@
-# 7z FFI SDK for Tauri (C + Rust)
+# sevenzip-ffi (C + Rust)
 
-A comprehensive SDK for 7z archive operations with both C and Rust interfaces, using the official LZMA SDK 23.01.
-
-**✅ PRODUCTION READY:** 100% compatible with official 7-Zip! All features working including split/multi-volume archives.
+A SDK for 7z archive operations with both C and Rust interfaces, using the official LZMA SDK 23.01.
 
 ## ⚠️ Important: Large File Compression
 
@@ -24,32 +22,31 @@ sz.create_archive_streaming("output.7z", &["/path/to/large/folder"], level, Some
 
 ## Features
 
-### Core Features ✅
+### Core Features
 
-- ✅ **Extract 7z archives** - Full compatibility with 7-Zip format
-- ✅ **List archive contents** - Inspect files with metadata (size, timestamp, CRC)
-- ✅ **Create 7z archives** - **100% compatible with official 7-Zip!** ✨
-- ✅ **Split/Multi-volume archives** - Create and extract .7z.001, .7z.002, etc.
-- ✅ **LZMA2 compression** - Modern compression with multi-threading support
-- ✅ **LZMA2 decompression** - Fast decompression
-- ✅ **Multi-file archives** - Multiple files in single .7z archive
-- ✅ **Progress callbacks** - Track extraction/compression progress
-- ✅ **C API** - Simple FFI interface for Tauri
-- ✅ **Rust crate** - Safe, idiomatic Rust bindings (67 tests passing)
-- ✅ **Cross-platform** - Windows, macOS, Linux
-- ✅ **Production tested** - Verified with 7zz v25.01
+- **Extract 7z archives** - Compatible with 7-Zip format
+- **List archive contents** - Inspect files with metadata (size, timestamp, CRC)
+- **Create 7z archives** - Compatible with official 7-Zip
+- **Split/Multi-volume archives** - Create and extract .7z.001, .7z.002, etc.
+- **LZMA2 compression** - Modern compression with multi-threading support
+- **LZMA2 decompression** - Fast decompression
+- **Multi-file archives** - Multiple files in single .7z archive
+- **Progress callbacks** - Track extraction/compression progress
+- **C API** - Simple FFI interface
+- **Rust crate** - Safe Rust bindings
+- **Cross-platform** - Windows, macOS, Linux
 
-### Advanced Features ✨
+### Advanced Features
 
-- ✅ **Directory support** - Recursive directory archiving with empty directory preservation
-- ✅ **Multi-threaded compression** - Up to 3x faster with configurable thread count
-- ✅ **Custom compression options** - Control thread count, dictionary size, solid mode
-- ✅ **Streaming compression** - Process files larger than RAM with chunk-based streaming
-- ✅ **Split/multi-volume archives** - Create and extract split archives (4GB, 8GB, custom sizes)
-- ✅ **Large file support** - 100GB+ files with streaming
-- ✅ **AES-256 encryption** - Pure Rust implementation (no OpenSSL required!)
+- **Directory support** - Recursive directory archiving with empty directory preservation
+- **Multi-threaded compression** - Configurable thread count
+- **Custom compression options** - Control thread count, dictionary size, solid mode
+- **Streaming compression** - Process files larger than RAM with chunk-based streaming
+- **Split/multi-volume archives** - Create and extract split archives (4GB, 8GB, custom sizes)
+- **Large file support** - Large files with streaming
+- **AES-256 encryption** - Pure Rust implementation (no OpenSSL required)
 
-**📖 See [ADVANCED_FEATURES.md](ADVANCED_FEATURES.md) for detailed documentation of all advanced features!**
+See [ADVANCED_FEATURES.md](ADVANCED_FEATURES.md) for detailed documentation.
 
 ## Quick Start
 

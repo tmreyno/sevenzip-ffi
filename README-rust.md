@@ -1,23 +1,21 @@
 # seven-zip
 
-A safe Rust wrapper for 7z archive operations using LZMA2 compression.
+A Rust wrapper for 7z archive operations using LZMA2 compression.
 
-This crate provides a high-level, idiomatic Rust API for working with 7z archives, built on top of the official LZMA SDK. It's designed for use in Rust applications and Tauri apps that need robust archive handling.
-
-**✅ PRODUCTION READY:** 100% compatible with official 7-Zip! 67 tests passing.
+This crate provides a high-level Rust API for working with 7z archives, built on top of the official LZMA SDK.
 
 ## Features
 
-- ✅ **Extract 7z archives** - Fast, reliable extraction with full format support
-- ✅ **Create 7z archives** - **100% compatible with official 7-Zip!**
-- ✅ **List archive contents** - Get file information without extraction
-- ✅ **Split/multi-volume archives** - Create and extract .7z.001, .7z.002, etc.
-- ✅ **AES-256 encryption** - Pure Rust (no OpenSSL required!)
-- ✅ **LZMA2 compression** - Modern, efficient compression algorithm
-- ✅ **Multi-file archives** - Multiple files in single archive
-- ✅ **Cross-platform** - Works on macOS, Linux, and Windows
-- ✅ **Safe API** - Memory-safe Rust interface with proper error handling
-- ✅ **Progress tracking** - Optional callbacks for long operations
+- **Extract 7z archives** - Extraction with format support
+- **Create 7z archives** - Compatible with official 7-Zip
+- **List archive contents** - Get file information without extraction
+- **Split/multi-volume archives** - Create and extract .7z.001, .7z.002, etc.
+- **AES-256 encryption** - Pure Rust (no OpenSSL required)
+- **LZMA2 compression** - Modern compression algorithm
+- **Multi-file archives** - Multiple files in single archive
+- **Cross-platform** - Works on macOS, Linux, and Windows
+- **Safe API** - Memory-safe Rust interface with error handling
+- **Progress tracking** - Optional callbacks for long operations
 
 ## Installation
 
@@ -242,8 +240,8 @@ The build system automatically detects your platform and configures accordingly.
 
 ### Formats
 
-- **Extract**: Standard .7z format (full compatibility)
-- **Create**: Standard .7z archives (100% 7-Zip compatible)
+- **Extract**: Standard .7z format
+- **Create**: Standard .7z archives
 - **Multi-file**: Standard .7z format with solid compression
 - **Split**: Multi-volume archives (.7z.001, .7z.002, etc.)
 - **Encryption**: AES-256-CBC (pure Rust, no OpenSSL)
@@ -288,13 +286,8 @@ fn main() {
 
 ## Testing
 
-Real-world validation:
-- ✅ Extracted 312 MB PST archive (33 MB compressed)
-- ✅ Byte-for-byte perfect extraction verified
-- ✅ Compression ratio: 22.1% (77.9% space saved)
-- ✅ Cross-platform builds tested
-
 Run tests:
+
 ```bash
 cargo test
 ```
@@ -320,8 +313,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 - Initial release
 - 7z extraction support
 - LZMA2 compression/decompression
-- Standard .7z multi-file archives (100% 7-Zip compatible)
+- Standard .7z multi-file archives
 - Pure Rust AES-256 encryption (no OpenSSL)
-- Safe Rust API with proper error handling
+- Safe Rust API with error handling
 - Cross-platform support (macOS, Linux, Windows)
-- 67 tests passing

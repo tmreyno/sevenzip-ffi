@@ -60,7 +60,7 @@ sz.create_archive_streaming(
 ### Use `create_archive_streaming()` for:
 - Large files (any size)
 - Large files (large+)
-- Production deployments
+- Deployments
 - Split archive creation
 - Progress monitoring needs
 

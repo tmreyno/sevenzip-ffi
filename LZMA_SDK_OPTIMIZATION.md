@@ -171,7 +171,7 @@ if (blockSize == LZMA2_ENC_PROPS_BLOCK_SIZE_AUTO) {
 }
 ```
 
-**For level 1:** blockSize = 1 MB (minimum size, perfect for fast compression)
+**For level 1:** blockSize = 1 MB (minimum size, good for fast compression)
 
 ## Complete Configuration for Level 1
 

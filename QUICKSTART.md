@@ -107,7 +107,7 @@ Progress: 100.0% (163/163 bytes)
 
 **Supported:**
 - ✅ Single file to/from LZMA format (`.lzma`)
-- ✅ Standard 7z archive creation (100% 7-Zip compatible)
+- ✅ Standard 7z archive creation (7-Zip compatible)
 - ✅ Multi-file 7z archives with solid compression
 - ✅ Split/multi-volume archives (.7z.001, .7z.002, etc.)
 - ✅ Compression levels 0-9 (default: 5)
@@ -118,7 +118,7 @@ Progress: 100.0% (163/163 bytes)
 
 ✅ **Archive Listing** - List all files in a 7z archive with metadata  
 ✅ **Archive Extraction** - Extract all files from a 7z archive  
-✅ **7z Archive Creation** - Create standard 7z archives (100% 7-Zip compatible)  
+✅ **7z Archive Creation** - Create standard 7z archives (7-Zip compatible)  
 ✅ **Multi-file Archives** - Multiple files with solid compression  
 ✅ **Split Archives** - Multi-volume archives (.7z.001, .7z.002, etc.)  
 ✅ **Single File Compression** - Compress files to LZMA format  

@@ -2,7 +2,7 @@
 
 ## Quick Start
 
-The library fully supports compressing and splitting 100GB+ files. Here's how:
+The library supports compressing and splitting large files. Here's how:
 
 ### Method 1: Compress + Split (Recommended - Works Now)
 
@@ -135,7 +135,7 @@ fn progress_callback(
 
 ## Streaming API
 
-Native multi-volume 7z archives are fully supported:
+Native multi-volume 7z archives are supported:
 
 ```rust
 // Native .001, .002, .003 volumes
@@ -152,7 +152,7 @@ sz.create_archive_streaming(
 // Output: output.7z.001, output.7z.002, output.7z.003, ...
 ```
 
-**Status**: ✅ Complete - 100% 7-Zip compatible
+**Status**: ✅ Complete - 7-Zip compatible
 
 ## Real-World Example
 
@@ -168,7 +168,7 @@ fn backup_database() -> Result<(), Box<dyn std::error::Error>> {
     // Compress with maximum compression
     sz.create_archive(
         "/backups/db_backup.7z",
-        &["/data/production.db"],
+        &["/data/database.db"],
         CompressionLevel::Ultra,
         None,
     )?;
@@ -209,14 +209,14 @@ The split operation needs space for both the full archive and the parts. If disk
 ## Next Steps
 
 - See `examples/large_file_demo.rs` for complete working code
-- For immediate use: Compress + split approach works perfectly now
+- For immediate use: Compress + split approach works now
 - For native multi-volume: Stay tuned, it's 90% complete!
 
 ## Summary
 
-✅ **100GB+ files fully supported**  
+✅ **large files supported**  
 ✅ **Native multi-volume archives**  
-✅ **100% 7-Zip compatible**  
+✅ **7-Zip compatible**  
 ✅ **Memory-efficient streaming**
 
 Happy compressing! 🎉
