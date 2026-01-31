@@ -336,6 +336,32 @@ SEVENZIP_API SevenZipErrorCode sevenzip_create_7z_streaming(
 );
 
 /**
+ * Create a 7z archive with TRUE streaming compression
+ * 
+ * ⚠️ IMPORTANT: This function processes files in 64MB chunks WITHOUT loading
+ * all data into RAM first. This is essential for large archives (10GB+) that
+ * would otherwise cause out-of-memory crashes.
+ * 
+ * Memory usage: ~250MB peak regardless of archive size
+ * 
+ * @param archive_path Output archive path
+ * @param input_paths Array of file/directory paths to compress (NULL-terminated)
+ * @param level Compression level
+ * @param options Streaming options (NULL for defaults)
+ * @param progress_callback Byte-level progress callback (NULL to disable)
+ * @param user_data User data for callback
+ * @return SEVENZIP_OK on success, error code otherwise
+ */
+SEVENZIP_API SevenZipErrorCode sevenzip_create_7z_true_streaming(
+    const char* archive_path,
+    const char** input_paths,
+    SevenZipCompressionLevel level,
+    const SevenZipStreamOptions* options,
+    SevenZipBytesProgressCallback progress_callback,
+    void* user_data
+);
+
+/**
  * Extract a 7z archive with streaming decompression and byte-level progress
  * Handles split/multi-volume archives automatically.
  * 

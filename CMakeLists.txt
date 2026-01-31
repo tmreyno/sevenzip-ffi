@@ -72,6 +72,7 @@ set(FFI_SOURCES
     src/archive_create.c
     src/archive_create_custom.c
     src/archive_create_multivolume.c
+    src/archive_create_true_streaming.c
     src/archive_extract.c
     src/archive_extract_custom.c
     src/archive_extract_split.c

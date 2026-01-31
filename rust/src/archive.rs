@@ -718,6 +718,129 @@ impl SevenZip {
         Ok(())
     }
 
+    /// Create a 7z archive using TRUE streaming compression (RECOMMENDED for large archives)
+    ///
+    /// ⚠️ **IMPORTANT**: This method processes files in 64MB chunks WITHOUT loading
+    /// all data into RAM first. Use this for archives larger than 8GB to avoid
+    /// out-of-memory crashes.
+    ///
+    /// The standard `create_archive_streaming` method (when split_size == 0) still
+    /// loads all file data into memory before compression, which causes OOM for
+    /// large archives. This method fixes that limitation.
+    ///
+    /// Memory usage: ~250MB peak regardless of archive size
+    ///
+    /// # Arguments
+    ///
+    /// * `archive_path` - Output archive path
+    /// * `input_paths` - Files/directories to compress
+    /// * `level` - Compression level
+    /// * `options` - Streaming options (chunk size, threads, etc.)
+    /// * `progress` - Optional byte-level progress callback
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use seven_zip::{SevenZip, CompressionLevel, StreamOptions};
+    ///
+    /// let sz = SevenZip::new()?;
+    /// let mut opts = StreamOptions::default();
+    /// opts.num_threads = 8;
+    /// opts.chunk_size = 64 * 1024 * 1024; // 64MB chunks
+    ///
+    /// // Create 88GB archive without running out of memory
+    /// sz.create_archive_true_streaming(
+    ///     "forensic_evidence.7z",
+    ///     &["/path/to/88gb/evidence/folder"],
+    ///     CompressionLevel::Normal,
+    ///     Some(&opts),
+    ///     Some(Box::new(|processed, total, file_bytes, file_total, filename| {
+    ///         let percent = if total > 0 {
+    ///             (processed as f64 / total as f64) * 100.0
+    ///         } else { 0.0 };
+    ///         println!("[{:.1}%] {} ({}/{} bytes)", percent, filename, file_bytes, file_total);
+    ///     }))
+    /// )?;
+    /// # Ok::<(), seven_zip::Error>(())
+    /// ```
+    pub fn create_archive_true_streaming(
+        &self,
+        archive_path: impl AsRef<Path>,
+        input_paths: &[impl AsRef<Path>],
+        level: CompressionLevel,
+        options: Option<&StreamOptions>,
+        progress: Option<BytesProgressCallback>,
+    ) -> Result<()> {
+        let archive_path_c = path_to_cstring(archive_path.as_ref())?;
+        
+        // Convert input paths to C strings
+        let input_paths_c: Vec<CString> = input_paths
+            .iter()
+            .map(|p| path_to_cstring(p.as_ref()))
+            .collect::<Result<_>>()?;
+        let mut input_ptrs: Vec<*const i8> = input_paths_c.iter().map(|s| s.as_ptr()).collect();
+        input_ptrs.push(ptr::null()); // NULL-terminate
+
+        // Convert options to C struct
+        let (opts_ptr, _password_c, _temp_dir_c) = if let Some(opts) = options {
+            let password_c = opts.password.as_ref().map(|p| CString::new(p.as_str())).transpose()?;
+            let temp_dir_c = opts.temp_dir.as_ref().map(|p| CString::new(p.as_str())).transpose()?;
+            let c_opts = ffi::SevenZipStreamOptions {
+                num_threads: opts.num_threads as i32,
+                dict_size: opts.dict_size,
+                solid: if opts.solid { 1 } else { 0 },
+                password: password_c.as_ref().map_or(ptr::null(), |p| p.as_ptr()),
+                split_size: opts.split_size,
+                chunk_size: opts.chunk_size,
+                temp_dir: temp_dir_c.as_ref().map_or(ptr::null(), |p| p.as_ptr()),
+                delete_temp_on_error: if opts.delete_temp_on_error { 1 } else { 0 },
+            };
+            (Box::new(c_opts), password_c, temp_dir_c)
+        } else {
+            // Initialize with defaults
+            let mut c_opts = std::mem::MaybeUninit::<ffi::SevenZipStreamOptions>::uninit();
+            unsafe {
+                ffi::sevenzip_stream_options_init(c_opts.as_mut_ptr());
+                (Box::new(c_opts.assume_init()), None, None)
+            }
+        };
+
+        // Set up progress callback
+        let (callback, user_data) = if let Some(cb) = progress {
+            let boxed = Box::new(cb);
+            let raw = Box::into_raw(boxed);
+            (
+                Some(bytes_progress_callback_wrapper as unsafe extern "C" fn(u64, u64, u64, u64, *const std::os::raw::c_char, *mut std::os::raw::c_void)),
+                raw as *mut std::os::raw::c_void,
+            )
+        } else {
+            (None, ptr::null_mut())
+        };
+
+        unsafe {
+            let result = ffi::sevenzip_create_7z_true_streaming(
+                archive_path_c.as_ptr(),
+                input_ptrs.as_ptr(),
+                level.into(),
+                &*opts_ptr,
+                callback,
+                user_data,
+            );
+
+            // Clean up the callback if it was allocated
+            if !user_data.is_null() {
+                let _boxed = Box::from_raw(user_data as *mut BytesProgressCallback);
+                // Drops automatically
+            }
+
+            if result != ffi::SevenZipErrorCode::SEVENZIP_OK {
+                return Err(Error::from_code(result));
+            }
+        }
+
+        Ok(())
+    }
+
     /// Compress a single file to LZMA2 format
     ///
     /// # Example

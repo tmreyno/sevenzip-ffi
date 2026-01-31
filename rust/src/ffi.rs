@@ -197,6 +197,17 @@ extern "C" {
         user_data: *mut c_void,
     ) -> SevenZipErrorCode;
     
+    /// Create a 7z archive using TRUE streaming (processes in chunks, ~250MB RAM max)
+    /// This is the recommended function for large archives (10GB+) to avoid OOM crashes
+    pub fn sevenzip_create_7z_true_streaming(
+        archive_path: *const c_char,
+        input_paths: *const *const c_char,
+        level: SevenZipCompressionLevel,
+        options: *const SevenZipStreamOptions,
+        progress_callback: SevenZipBytesProgressCallback,
+        user_data: *mut c_void,
+    ) -> SevenZipErrorCode;
+    
     /// Extract a 7z archive with streaming decompression and byte-level progress
     pub fn sevenzip_extract_streaming(
         archive_path: *const c_char,
