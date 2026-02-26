@@ -1,0 +1,246 @@
+/**
+ * EvidenceCollectionForm.css
+ * Styles for the forensic evidence collection form component.
+ */
+
+/* ── Form container ───────────────────────────────────────────────────────── */
+.evidence-form {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 0.9rem;
+  color: #1a1a2e;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.form-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #16213e;
+  margin: 0 0 1.25rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #0f3460;
+}
+
+/* ── Fieldsets ─────────────────────────────────────────────────────────────── */
+.evidence-form fieldset {
+  border: 1px solid #cdd8e3;
+  border-radius: 6px;
+  padding: 1rem 1.25rem 1.25rem;
+  margin-bottom: 1.25rem;
+  background: #f9fbfd;
+}
+
+.evidence-form legend {
+  font-weight: 600;
+  color: #0f3460;
+  padding: 0 0.5rem;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ── Layout helpers ────────────────────────────────────────────────────────── */
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 0.75rem;
+}
+
+/* ── Form groups ───────────────────────────────────────────────────────────── */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 0.75rem;
+}
+
+.form-group label {
+  font-weight: 500;
+  color: #374151;
+}
+
+.required-mark {
+  color: #c0392b;
+  margin-left: 2px;
+}
+
+/* ── Inputs, selects, textareas ────────────────────────────────────────────── */
+.evidence-form input[type="text"],
+.evidence-form input[type="date"],
+.evidence-form select,
+.evidence-form textarea {
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid #b0bec5;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #1a1a2e;
+  font-size: 0.875rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-sizing: border-box;
+}
+
+.evidence-form input[type="text"]:focus,
+.evidence-form input[type="date"]:focus,
+.evidence-form select:focus,
+.evidence-form textarea:focus {
+  outline: none;
+  border-color: #0f3460;
+  box-shadow: 0 0 0 3px rgba(15, 52, 96, 0.15);
+}
+
+.evidence-form select {
+  cursor: pointer;
+}
+
+.evidence-form textarea {
+  resize: vertical;
+  min-height: 90px;
+}
+
+/* ── "Other" free-text input ──────────────────────────────────────────────── */
+.other-input {
+  margin-top: 0.4rem;
+  border-color: #f59e0b !important;
+  background: #fffbeb !important;
+}
+
+.other-input:focus {
+  border-color: #d97706 !important;
+  box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.18) !important;
+}
+
+/* ── Hint text ────────────────────────────────────────────────────────────── */
+.hint {
+  color: #6b7280;
+  font-style: italic;
+  margin: 0.25rem 0;
+  font-size: 0.85rem;
+}
+
+/* ── Checkbox group ───────────────────────────────────────────────────────── */
+.form-group--checkbox {
+  flex-direction: row;
+  align-items: center;
+}
+
+.form-group--checkbox label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.form-group--checkbox input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  cursor: pointer;
+  accent-color: #0f3460;
+}
+
+/* ── Action buttons ───────────────────────────────────────────────────────── */
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.btn {
+  padding: 0.5rem 1.25rem;
+  border: none;
+  border-radius: 5px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+.btn--primary {
+  background: #0f3460;
+  color: #ffffff;
+}
+
+.btn--primary:hover {
+  background: #16213e;
+}
+
+.btn--secondary {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.btn--secondary:hover {
+  background: #d1d5db;
+}
+
+/* ── Dark-mode support ────────────────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  .evidence-form {
+    color: #e2e8f0;
+  }
+
+  .form-title {
+    color: #e2e8f0;
+    border-bottom-color: #4a90d9;
+  }
+
+  .evidence-form fieldset {
+    background: #1e293b;
+    border-color: #334155;
+  }
+
+  .evidence-form legend {
+    color: #93c5fd;
+  }
+
+  .form-group label {
+    color: #cbd5e1;
+  }
+
+  .evidence-form input[type="text"],
+  .evidence-form input[type="date"],
+  .evidence-form select,
+  .evidence-form textarea {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-color: #475569;
+  }
+
+  .evidence-form input[type="text"]:focus,
+  .evidence-form input[type="date"]:focus,
+  .evidence-form select:focus,
+  .evidence-form textarea:focus {
+    border-color: #4a90d9;
+    box-shadow: 0 0 0 3px rgba(74, 144, 217, 0.2);
+  }
+
+  .other-input {
+    background: #1c1a10 !important;
+    border-color: #d97706 !important;
+  }
+
+  .hint {
+    color: #94a3b8;
+  }
+
+  .btn--primary {
+    background: #4a90d9;
+    color: #0f172a;
+  }
+
+  .btn--primary:hover {
+    background: #3a80c9;
+  }
+
+  .btn--secondary {
+    background: #334155;
+    color: #e2e8f0;
+  }
+
+  .btn--secondary:hover {
+    background: #475569;
+  }
+}

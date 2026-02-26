@@ -45,8 +45,9 @@ demo_rust_crate.sh
 forensic_archiver_encrypted.sh
 test_encryption_e2e.sh
 
-# Tauri integration docs (optional)
-tauri/
+# Tauri crate build artifacts
+tauri/src-tauri/target/
+tauri/src-tauri/Cargo.lock
 
 # macOS
 .DS_Store
