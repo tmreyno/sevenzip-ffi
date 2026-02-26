@@ -100,6 +100,33 @@ cargo bench
 ### Tauri Integration
 Located in `tauri/`:
 - **[tauri/TAURI_INTEGRATION_GUIDE.md](tauri/TAURI_INTEGRATION_GUIDE.md)** - Complete Tauri + SolidJS integration guide
+- **[tauri/src-tauri/src/evidence_form.rs](tauri/src-tauri/src/evidence_form.rs)** - Rust backend: device type data model and Tauri command
+- **[tauri/src/deviceTypeData.ts](tauri/src/deviceTypeData.ts)** - TypeScript data model mirroring the Rust structs
+- **[tauri/src/components/EvidenceCollectionForm.tsx](tauri/src/components/EvidenceCollectionForm.tsx)** - SolidJS evidence collection form component
+- **[tauri/src/components/EvidenceCollectionForm.css](tauri/src/components/EvidenceCollectionForm.css)** - Form styles (light + dark mode)
+
+#### Evidence Collection Form – Device-Type-Aware Fields
+
+When a device type is selected the form automatically repopulates the
+**Acquisition Interface** and **Acquisition Protocol** dropdowns with
+options that are common for that device type.  Every dropdown always
+ends with **"Other (specify below)"** so examiners can enter custom values.
+
+Supported device types out of the box:
+
+| Device Type | Example Interfaces |
+|---|---|
+| Mobile Device (Phone / Tablet) | USB, Wi-Fi, ADB, JTAG, Chip-Off |
+| Computer / Laptop | SATA, NVMe, Thunderbolt, Write-Blocker |
+| External Storage | USB, eSATA, FireWire, Disk Imaging |
+| Network Device | Ethernet, Serial, SSH, PCAP |
+| IoT / Embedded | UART, JTAG, SPI, I2C, Chip-Off |
+| Vehicle / Telematics | OBD-II, CAN Bus, Bluetooth |
+| Cloud / Virtual Machine | REST API, VM Snapshot, Cloud CLI |
+| Drone / UAV | USB, Wi-Fi, ADB, Proprietary |
+| Other (catch-all) | — |
+
+See [tauri/TAURI_INTEGRATION_GUIDE.md](tauri/TAURI_INTEGRATION_GUIDE.md) for full integration instructions.
 
 ## 📜 Scripts
 
