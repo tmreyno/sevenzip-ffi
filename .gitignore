@@ -5,7 +5,6 @@ bin/
 lib/
 target/
 dist/
-lzma_test/
 
 # IDE files
 .vscode/
@@ -22,6 +21,7 @@ lzma_test/
 *.dylib
 *.dll
 *.exe
+*.node
 
 # CMake files
 CMakeCache.txt
@@ -32,21 +32,27 @@ Makefile
 # Rust
 Cargo.lock
 
-# Test files
-test_archive.7z
+# Node
+node_modules/
+package-lock.json
+
+# Binary / test data
+*.7z
+*.7z.*
+*.dat
+*.bin
+
+# Test output directories
 test_output/
-test_*.7z
-dummy.7z
-test_*.rs
-
-# Demo/test scripts (not needed for building)
-demo.sh
-demo_rust_crate.sh
-forensic_archiver_encrypted.sh
-test_encryption_e2e.sh
-
-# Tauri integration docs (optional)
-tauri/
+extracted/
+extract_test/
+capability_test/
+compat_test/
+demo_test_*/
+demo_working/
+showcase_test/
+test_data/
+lzma_temp/
 
 # macOS
 .DS_Store

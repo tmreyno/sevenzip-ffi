@@ -1,3 +1,0 @@
-This is another test file.
-It contains multiple lines of text.
-7z compression works great!
