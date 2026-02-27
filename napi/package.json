@@ -1,0 +1,68 @@
+{
+  "name": "@sevenzip/napi",
+  "version": "1.0.0",
+  "description": "High-performance 7z compression for Node.js and browsers via NAPI",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tmreyno/sevenzip-ffi.git",
+    "directory": "napi"
+  },
+  "keywords": [
+    "7z",
+    "compression",
+    "lzma",
+    "archive",
+    "napi",
+    "rust",
+    "solidjs",
+    "react",
+    "node"
+  ],
+  "author": "Terry Reynolds",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "napi": {
+    "binaryName": "sevenzip-napi",
+    "targets": [
+      "x86_64-apple-darwin",
+      "aarch64-apple-darwin",
+      "x86_64-unknown-linux-gnu",
+      "aarch64-unknown-linux-gnu",
+      "x86_64-unknown-linux-musl",
+      "aarch64-unknown-linux-musl",
+      "x86_64-pc-windows-msvc",
+      "i686-pc-windows-msvc",
+      "aarch64-pc-windows-msvc"
+    ]
+  },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "*.node"
+  ],
+  "scripts": {
+    "artifacts": "napi artifacts",
+    "build": "npm run build:cmake && napi build --platform --release",
+    "build:debug": "npm run build:cmake && napi build --platform",
+    "build:cmake": "cd .. && cmake --build build --config Release",
+    "prepublishOnly": "napi prepublish -t npm",
+    "test": "node test.js",
+    "universal": "napi universal",
+    "version": "napi version"
+  },
+  "devDependencies": {
+    "@napi-rs/cli": "^2.18.0"
+  },
+  "packageManager": "npm@10.2.4",
+  "optionalDependencies": {
+    "@sevenzip/napi-darwin-x64": "1.0.0",
+    "@sevenzip/napi-darwin-arm64": "1.0.0",
+    "@sevenzip/napi-linux-x64-gnu": "1.0.0",
+    "@sevenzip/napi-linux-arm64-gnu": "1.0.0",
+    "@sevenzip/napi-win32-x64-msvc": "1.0.0"
+  }
+}

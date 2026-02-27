@@ -32,6 +32,10 @@ target_link_libraries(example_create_7z PRIVATE 7z_ffi)
 add_executable(example_stream_compress stream_compress.c)
 target_link_libraries(example_stream_compress PRIVATE 7z_ffi)
 
+# Example: Multi-volume (split) archive creator
+add_executable(demo_multivolume demo_multivolume.c)
+target_link_libraries(demo_multivolume PRIVATE 7z_ffi)
+
 # Example: Forensic evidence archiver (production-ready)
 add_executable(forensic_archiver forensic_archiver.c)
 target_link_libraries(forensic_archiver PRIVATE 7z_ffi)

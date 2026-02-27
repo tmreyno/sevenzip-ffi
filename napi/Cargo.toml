@@ -1,0 +1,31 @@
+[package]
+name = "sevenzip-napi"
+version = "1.0.0"
+edition = "2021"
+authors = ["Terry Reynolds <tmreyno@github.com>"]
+license = "MIT"
+description = "Node.js bindings for 7z compression via NAPI-RS"
+repository = "https://github.com/tmreyno/sevenzip-ffi"
+keywords = ["7z", "compression", "lzma", "archive", "napi"]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+# NAPI-RS for Node.js bindings
+napi = { version = "2.16", features = ["async", "tokio_rt"] }
+napi-derive = "2.16"
+tokio = { version = "1", features = ["rt-multi-thread"] }
+
+[build-dependencies]
+napi-build = "2.1"
+
+[profile.release]
+lto = true
+strip = true
+opt-level = 3
+
+[package.metadata.napi]
+name = "sevenzip-napi"
+# Ensure compatibility with Node.js 16+
+node_min_version = "16.0.0"

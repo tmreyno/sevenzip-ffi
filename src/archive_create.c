@@ -8,6 +8,7 @@
 #include "Lzma2Enc.h"
 #include "7zCrc.h"
 #include "Alloc.h"
+#include "utf8_utf16.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -93,13 +94,21 @@ static const Byte k7zMethodCopy[1] = { 0x00 };  /* Copy codec - no compression *
 /* File entry structure */
 typedef struct {
     char* name;
+    char* original_path;   /* Original full path (for forensic manifest) */
     uint64_t size;
-    uint64_t pack_size;  /* Support files >4GB */
-    uint64_t mtime;
+    uint64_t pack_size;    /* Support files >4GB */
+    uint64_t mtime;        /* Modification time (Windows FILETIME) */
+    uint64_t ctime;        /* Creation time (Windows FILETIME) */
+    uint64_t atime;        /* Access time (Windows FILETIME) */
     uint32_t attrib;
     uint32_t crc;
-    Byte* data;  /* Raw data (for in-memory compression) */
+    uint32_t uid;          /* Owner user ID (Unix) */
+    uint32_t gid;          /* Owner group ID (Unix) */
+    uint16_t mode;         /* Unix file permissions */
+    Byte* data;            /* Raw data (for in-memory compression) */
     int is_dir;
+    int has_ctime;         /* Whether creation time is available */
+    int has_atime;         /* Whether access time is available */
 } SevenZFile;
 
 /* Archive builder */
@@ -258,12 +267,26 @@ static SevenZipErrorCode add_directory_recursive(
         const char* rel_path = full_path + strlen(base_path);
         while (*rel_path == '/' || *rel_path == '\\') rel_path++;
         file->name = strdup(rel_path);
+        file->original_path = strdup(full_path);
         
         FILETIME ft = find_data.ftLastWriteTime;
         ULARGE_INTEGER ull;
         ull.LowPart = ft.dwLowDateTime;
         ull.HighPart = ft.dwHighDateTime;
         file->mtime = ull.QuadPart;
+        
+        /* Creation time */
+        ull.LowPart = find_data.ftCreationTime.dwLowDateTime;
+        ull.HighPart = find_data.ftCreationTime.dwHighDateTime;
+        file->ctime = ull.QuadPart;
+        file->has_ctime = 1;
+        
+        /* Access time */
+        ull.LowPart = find_data.ftLastAccessTime.dwLowDateTime;
+        ull.HighPart = find_data.ftLastAccessTime.dwHighDateTime;
+        file->atime = ull.QuadPart;
+        file->has_atime = 1;
+        
         file->attrib = find_data.dwFileAttributes;
         file->is_dir = (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
         
@@ -355,7 +378,24 @@ static SevenZipErrorCode add_directory_recursive(
         const char* rel_path = full_path + strlen(base_path);
         while (*rel_path == '/') rel_path++;
         file->name = strdup(rel_path);
+        file->original_path = strdup(full_path);
         file->mtime = (uint64_t)st.st_mtime * 10000000ULL + 116444736000000000ULL;
+        file->atime = (uint64_t)st.st_atime * 10000000ULL + 116444736000000000ULL;
+        file->has_atime = 1;
+        #if defined(__APPLE__)
+        file->ctime = (uint64_t)st.st_birthtimespec.tv_sec * 10000000ULL + 116444736000000000ULL;
+        file->has_ctime = 1;
+        #elif defined(__linux__)
+        /* Linux statx() provides birth time on supported filesystems */
+        file->ctime = (uint64_t)st.st_ctime * 10000000ULL + 116444736000000000ULL;
+        file->has_ctime = 1;  /* Note: st_ctime on Linux is metadata change time, not birth time */
+        #else
+        file->ctime = file->mtime;  /* Fallback: use mtime as ctime */
+        file->has_ctime = 0;
+        #endif
+        file->uid = st.st_uid;
+        file->gid = st.st_gid;
+        file->mode = (uint16_t)(st.st_mode & 07777);
         file->attrib = (uint32_t)st.st_mode;
         file->is_dir = S_ISDIR(st.st_mode);
         
@@ -552,7 +592,28 @@ static SevenZipErrorCode write_7z_archive(
     }
     
     /* === BUILD HEADER IN MEMORY === */
-    size_t header_capacity = 65536;  /* 64KB buffer */
+    /* Pre-calculate required header size to prevent buffer overflow.
+     * The old fixed 64KB buffer would overflow with many files or long paths,
+     * corrupting the process heap (crash: SIGSEGV in unrelated threads). */
+    size_t num_dir_entries = 0;
+    size_t names_total = 0;
+    size_t num_data_files = 0;
+    for (size_t i = 0; i < builder->file_count; i++) {
+        names_total += utf8_to_utf16le_size(builder->files[i].name);
+        if (builder->files[i].is_dir) num_dir_entries++;
+        else num_data_files++;
+    }
+    size_t header_required = 256                             /* fixed fields, markers, WriteNumber overhead */
+        + num_data_files * 9                                 /* SubStreamsInfo: WriteNumber per file size */
+        + 2 + num_data_files * 4                             /* CRC values */
+        + ((builder->file_count + 7) / 8) + 16               /* EmptyStream bit vector */
+        + names_total + 16                                   /* Names (UTF-16LE) + overhead */
+        + 4 + builder->file_count * 8                        /* MTime */
+        + 4 + builder->file_count * 8                        /* CTime */
+        + 4 + builder->file_count * 8                        /* ATime */
+        + 4 + builder->file_count * 4;                       /* WinAttrib */
+    size_t header_capacity = header_required + (header_required / 4) + 1024;  /* +25% + 1KB margin */
+    if (header_capacity < 4096) header_capacity = 4096;      /* Minimum 4KB */
     Byte* header = (Byte*)malloc(header_capacity);
     if (!header) {
         free(pack_data);
@@ -562,6 +623,22 @@ static SevenZipErrorCode write_7z_archive(
     
     Byte* p = header;
     Byte* header_start = p;
+    Byte* header_end = header + header_capacity;
+    
+    /* Macro to check remaining space before writing N bytes */
+    #define CHECK_SPACE(n) do { \
+        if ((size_t)(header_end - p) < (size_t)(n)) { \
+            fprintf(stderr, "[ERROR] write_7z_archive: header buffer overflow prevented " \
+                    "(need %zu bytes, have %zu remaining, capacity %zu)\n", \
+                    (size_t)(n), (size_t)(header_end - p), header_capacity); \
+            free(header); \
+            free(pack_data); \
+            fclose(f); \
+            return SEVENZIP_ERROR_COMPRESS; \
+        } \
+    } while(0)
+    
+    CHECK_SPACE(64);  /* Fixed header fields */
     
     /* Header marker */
     *p++ = k7zIdHeader;
@@ -649,6 +726,9 @@ static SevenZipErrorCode write_7z_archive(
         }
     }
     
+    /* Check space for file sizes + CRCs */
+    CHECK_SPACE(20 + num_files * 13 + num_files * 4);
+    
     /* Number of unpack streams per folder */
     *p++ = k7zIdNumUnpackStream;
     WriteNumber(&p, num_files);  /* Number of files extracted from single stream */
@@ -694,6 +774,16 @@ static SevenZipErrorCode write_7z_archive(
         }
     }
     
+    /* Check space for EmptyStream + Names + CTime + ATime + MTime + WinAttrib */
+    {
+        size_t names_est = 0;
+        for (size_t i = 0; i < builder->file_count; i++) {
+            names_est += utf8_to_utf16le_size(builder->files[i].name);
+        }
+        CHECK_SPACE(names_est + 16 + ((builder->file_count + 7) / 8) +
+                    builder->file_count * 28 + 48);
+    }
+    
     if (has_dirs) {
         *p++ = k7zIdEmptyStream;
         size_t mask_size = (builder->file_count + 7) / 8;
@@ -707,23 +797,17 @@ static SevenZipErrorCode write_7z_archive(
         p += mask_size;
     }
     
-    /* Names (UTF-16LE) */
+    /* Names (UTF-16LE) — proper UTF-8 to UTF-16LE conversion */
     *p++ = k7zIdName;
     size_t names_size = 0;
     for (size_t i = 0; i < builder->file_count; i++) {
-        names_size += (strlen(builder->files[i].name) + 1) * 2;
+        names_size += utf8_to_utf16le_size(builder->files[i].name);
     }
     WriteNumber(&p, names_size + 1);
     *p++ = 0;  /* External flag = 0 (names embedded) */
     
     for (size_t i = 0; i < builder->file_count; i++) {
-        const char* name = builder->files[i].name;
-        while (*name) {
-            *p++ = (Byte)*name++;
-            *p++ = 0;  /* High byte of UTF-16LE */
-        }
-        *p++ = 0;  /* Null terminator low byte */
-        *p++ = 0;  /* Null terminator high byte */
+        p += utf8_to_utf16le(p, builder->files[i].name);
     }
     
     /* Modification times (Windows FILETIME format) */
@@ -734,6 +818,30 @@ static SevenZipErrorCode write_7z_archive(
     *p++ = 0;  /* External flag = 0 */
     for (size_t i = 0; i < builder->file_count; i++) {
         uint64_t filetime = builder->files[i].mtime;
+        memcpy(p, &filetime, 8);
+        p += 8;
+    }
+    
+    /* Creation times (Windows FILETIME format) */
+    *p++ = k7zIdCTime;
+    size_t ctime_size = 2 + (8 * builder->file_count);
+    WriteNumber(&p, ctime_size);
+    *p++ = 1;  /* All times defined */
+    *p++ = 0;  /* External flag = 0 */
+    for (size_t i = 0; i < builder->file_count; i++) {
+        uint64_t filetime = builder->files[i].has_ctime ? builder->files[i].ctime : builder->files[i].mtime;
+        memcpy(p, &filetime, 8);
+        p += 8;
+    }
+    
+    /* Access times (Windows FILETIME format) */
+    *p++ = k7zIdATime;
+    size_t atime_size = 2 + (8 * builder->file_count);
+    WriteNumber(&p, atime_size);
+    *p++ = 1;  /* All times defined */
+    *p++ = 0;  /* External flag = 0 */
+    for (size_t i = 0; i < builder->file_count; i++) {
+        uint64_t filetime = builder->files[i].has_atime ? builder->files[i].atime : builder->files[i].mtime;
         memcpy(p, &filetime, 8);
         p += 8;
     }
@@ -753,14 +861,18 @@ static SevenZipErrorCode write_7z_archive(
     *p++ = k7zIdEnd;  /* End FilesInfo */
     *p++ = k7zIdEnd;  /* End Header */
     
+    #undef CHECK_SPACE
+    
     /* === FINALIZE HEADER === */
     size_t actual_header_size = p - header_start;
     
-    /* Ensure we didn't overflow */
+    /* Defensive check (should never fire with pre-calculated allocation) */
     if (actual_header_size > header_capacity) {
+        fprintf(stderr, "[ERROR] write_7z_archive: header overflow detected "
+                "(actual %zu > capacity %zu)\n", actual_header_size, header_capacity);
         free(header);
         fclose(f);
-        return SEVENZIP_ERROR_COMPRESS;  /* Header too large */
+        return SEVENZIP_ERROR_COMPRESS;
     }
     
     /* Calculate header CRC */
@@ -859,26 +971,26 @@ SevenZipErrorCode sevenzip_create_7z(
             break;
         case SEVENZIP_LEVEL_FAST:
             builder.props.lzmaProps.level = 3;
-            builder.props.lzmaProps.dictSize = opts->dict_size > 0 ? opts->dict_size : (1 << 20);
+            builder.props.lzmaProps.dictSize = opts->dict_size > 0 ? opts->dict_size : (1 << 22);  /* 4MB — SDK 24.09 default for level 3 */
             break;
         case SEVENZIP_LEVEL_NORMAL:
             builder.props.lzmaProps.level = 5;
-            builder.props.lzmaProps.dictSize = opts->dict_size > 0 ? opts->dict_size : (1 << 23);
+            builder.props.lzmaProps.dictSize = opts->dict_size > 0 ? opts->dict_size : (1 << 25);  /* 32MB — SDK 24.09 default for level 5 */
             if (opts->num_threads == 0) builder.props.numBlockThreads_Max = 2;
             break;
         case SEVENZIP_LEVEL_MAXIMUM:
             builder.props.lzmaProps.level = 7;
-            builder.props.lzmaProps.dictSize = opts->dict_size > 0 ? opts->dict_size : (1 << 25);
+            builder.props.lzmaProps.dictSize = opts->dict_size > 0 ? opts->dict_size : (1 << 27);  /* 128MB — SDK 24.09 default for level 7 */
             if (opts->num_threads == 0) builder.props.numBlockThreads_Max = 2;
             break;
         case SEVENZIP_LEVEL_ULTRA:
             builder.props.lzmaProps.level = 9;
-            builder.props.lzmaProps.dictSize = opts->dict_size > 0 ? opts->dict_size : (1 << 26);
+            builder.props.lzmaProps.dictSize = opts->dict_size > 0 ? opts->dict_size : (1 << 28);  /* 256MB — SDK 24.09 default for level 9 */
             if (opts->num_threads == 0) builder.props.numBlockThreads_Max = 2;
             break;
         default:
             builder.props.lzmaProps.level = 5;
-            builder.props.lzmaProps.dictSize = opts->dict_size > 0 ? opts->dict_size : (1 << 23);
+            builder.props.lzmaProps.dictSize = opts->dict_size > 0 ? opts->dict_size : (1 << 25);  /* 32MB — SDK 24.09 default for level 5 */
     }
     Lzma2EncProps_Normalize(&builder.props);
     
@@ -924,7 +1036,23 @@ SevenZipErrorCode sevenzip_create_7z(
             const char* name = strrchr(path, '/');
             if (!name) name = strrchr(path, '\\');
             file->name = strdup(name ? name + 1 : path);
+            file->original_path = strdup(path);
             file->mtime = (uint64_t)st.st_mtime * 10000000ULL + 116444736000000000ULL;
+            file->atime = (uint64_t)st.st_atime * 10000000ULL + 116444736000000000ULL;
+            file->has_atime = 1;
+            #if defined(__APPLE__)
+            file->ctime = (uint64_t)st.st_birthtimespec.tv_sec * 10000000ULL + 116444736000000000ULL;
+            file->has_ctime = 1;
+            #elif defined(__linux__)
+            file->ctime = (uint64_t)st.st_ctime * 10000000ULL + 116444736000000000ULL;
+            file->has_ctime = 1;
+            #else
+            file->ctime = file->mtime;
+            file->has_ctime = 0;
+            #endif
+            file->uid = st.st_uid;
+            file->gid = st.st_gid;
+            file->mode = (uint16_t)(st.st_mode & 07777);
             file->attrib = (uint32_t)st.st_mode;
             file->is_dir = 0;  /* Regular file */
             
@@ -972,6 +1100,7 @@ cleanup:
     /* Free resources */
     for (size_t i = 0; i < builder.file_count; i++) {
         if (builder.files[i].name) free(builder.files[i].name);
+        if (builder.files[i].original_path) free(builder.files[i].original_path);
         if (builder.files[i].data) free(builder.files[i].data);
     }
     free(builder.files);

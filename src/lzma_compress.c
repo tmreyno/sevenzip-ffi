@@ -1,6 +1,7 @@
 #include "7z_ffi.h"
 #include "7zFile.h"
 #include "7zVersion.h"
+#include "LzmaEnc.h"
 #include "Lzma2Enc.h"
 #include "Alloc.h"
 
@@ -265,4 +266,172 @@ SevenZipErrorCode sevenzip_compress(
      */
     
     return SEVENZIP_ERROR_NOT_IMPLEMENTED;
+}
+
+/* ============================================================================
+ * LZMA1 Compression - sevenzip_compress_lzma
+ * Output format: 5 bytes LZMA props + 8 bytes uncompressed size (LE) + data
+ * This matches the .lzma format that sevenzip_decompress_lzma reads.
+ * ============================================================================ */
+
+SevenZipErrorCode sevenzip_compress_lzma(
+    const char* input_path,
+    const char* output_path,
+    SevenZipCompressionLevel level,
+    SevenZipProgressCallback progress_callback,
+    void* user_data
+) {
+    if (!input_path || !output_path) {
+        return SEVENZIP_ERROR_INVALID_PARAM;
+    }
+
+    if (!is_regular_file(input_path)) {
+        return SEVENZIP_ERROR_OPEN_FILE;
+    }
+
+    /* Read input file */
+    size_t input_size = 0;
+    unsigned char* input_data = read_file_contents(input_path, &input_size);
+    if (!input_data) {
+        return SEVENZIP_ERROR_OPEN_FILE;
+    }
+
+    /* Set up LZMA1 encoder properties based on compression level */
+    CLzmaEncProps props;
+    LzmaEncProps_Init(&props);
+
+    switch (level) {
+        case SEVENZIP_LEVEL_STORE:
+            props.level = 0;
+            props.dictSize = 1 << 16; /* 64 KB */
+            break;
+        case SEVENZIP_LEVEL_FASTEST:
+            props.level = 1;
+            props.dictSize = 1 << 18; /* 256 KB */
+            break;
+        case SEVENZIP_LEVEL_FAST:
+            props.level = 3;
+            props.dictSize = 1 << 20; /* 1 MB */
+            break;
+        case SEVENZIP_LEVEL_NORMAL:
+            props.level = 5;
+            props.dictSize = 1 << 23; /* 8 MB */
+            break;
+        case SEVENZIP_LEVEL_MAXIMUM:
+            props.level = 7;
+            props.dictSize = 1 << 25; /* 32 MB */
+            break;
+        case SEVENZIP_LEVEL_ULTRA:
+            props.level = 9;
+            props.dictSize = 1 << 26; /* 64 MB */
+            break;
+        default:
+            props.level = 5;
+            props.dictSize = 1 << 23;
+            break;
+    }
+
+    /* Allocate output buffer (worst case: input size + overhead) */
+    SizeT dest_len = input_size + input_size / 3 + 128;
+    unsigned char* dest = (unsigned char*)malloc(dest_len);
+    if (!dest) {
+        free(input_data);
+        return SEVENZIP_ERROR_MEMORY;
+    }
+
+    /* Encode using one-call interface */
+    Byte props_encoded[5];
+    SizeT props_size = 5;
+
+    SRes res = LzmaEncode(
+        dest, &dest_len,
+        input_data, input_size,
+        &props, props_encoded, &props_size,
+        0, /* writeEndMark = 0 (we store uncompressed size in header) */
+        NULL, /* progress */
+        &g_Alloc, &g_BigAlloc
+    );
+
+    free(input_data);
+
+    if (res != SZ_OK) {
+        free(dest);
+        return SEVENZIP_ERROR_COMPRESS;
+    }
+
+    /* Write .lzma file: 5 bytes props + 8 bytes uncompressed size (LE) + data */
+    FILE* out_file = fopen(output_path, "wb");
+    if (!out_file) {
+        free(dest);
+        return SEVENZIP_ERROR_OPEN_FILE;
+    }
+
+    /* Write 5-byte LZMA properties */
+    if (fwrite(props_encoded, 1, 5, out_file) != 5) {
+        fclose(out_file);
+        free(dest);
+        remove(output_path);
+        return SEVENZIP_ERROR_EXTRACT;
+    }
+
+    /* Write 8-byte uncompressed size (little-endian) */
+    UInt64 unpack_size = (UInt64)input_size;
+    Byte size_bytes[8];
+    for (int i = 0; i < 8; i++) {
+        size_bytes[i] = (Byte)(unpack_size >> (i * 8));
+    }
+    if (fwrite(size_bytes, 1, 8, out_file) != 8) {
+        fclose(out_file);
+        free(dest);
+        remove(output_path);
+        return SEVENZIP_ERROR_EXTRACT;
+    }
+
+    /* Write compressed data */
+    if (fwrite(dest, 1, dest_len, out_file) != dest_len) {
+        fclose(out_file);
+        free(dest);
+        remove(output_path);
+        return SEVENZIP_ERROR_EXTRACT;
+    }
+
+    fclose(out_file);
+    free(dest);
+
+    /* Progress callback */
+    if (progress_callback) {
+        progress_callback(1, 1, user_data);
+    }
+
+    return SEVENZIP_OK;
+}
+
+/* ============================================================================
+ * LZMA2 Compression - sevenzip_compress_lzma2
+ * Output format: 1 byte LZMA2 property + LZMA2 compressed data
+ * This matches the format that sevenzip_decompress_lzma2 reads.
+ * ============================================================================ */
+
+SevenZipErrorCode sevenzip_compress_lzma2(
+    const char* input_path,
+    const char* output_path,
+    SevenZipCompressionLevel level,
+    SevenZipProgressCallback progress_callback,
+    void* user_data
+) {
+    if (!input_path || !output_path) {
+        return SEVENZIP_ERROR_INVALID_PARAM;
+    }
+
+    if (!is_regular_file(input_path)) {
+        return SEVENZIP_ERROR_OPEN_FILE;
+    }
+
+    return compress_single_file_lzma2(
+        input_path,
+        output_path,
+        level,
+        progress_callback,
+        user_data
+    );
 }

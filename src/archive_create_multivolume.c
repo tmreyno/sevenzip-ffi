@@ -14,6 +14,7 @@
 #include "../lzma/C/7zCrc.h"
 #include "../lzma/C/Lzma2Enc.h"
 #include "../lzma/C/Alloc.h"
+#include "utf8_utf16.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,6 +34,7 @@
     #define S_ISREG(m) (((m) & _S_IFMT) == _S_IFREG)
     #define S_ISDIR(m) (((m) & _S_IFMT) == _S_IFDIR)
     #define USE_MMAP 0
+    #define CAPTURE_CTIME(st_ptr, ctime_var, has_ctime_var) do { (ctime_var) = 0; (has_ctime_var) = 0; } while(0)
 #else
     #include <unistd.h>
     #include <dirent.h>
@@ -41,6 +43,23 @@
     #define STAT stat
     #define PATH_SEP '/'
     #define USE_MMAP 1
+    #if defined(__APPLE__)
+        #define CAPTURE_CTIME(st_ptr, ctime_var, has_ctime_var) do { \
+            if ((st_ptr)->st_birthtimespec.tv_sec > 0) { \
+                (ctime_var) = ((uint64_t)(st_ptr)->st_birthtimespec.tv_sec * 10000000ULL) + 116444736000000000ULL; \
+                (has_ctime_var) = 1; \
+            } else { \
+                (ctime_var) = 0; (has_ctime_var) = 0; \
+            } \
+        } while(0)
+    #elif defined(__linux__)
+        #define CAPTURE_CTIME(st_ptr, ctime_var, has_ctime_var) do { \
+            (ctime_var) = ((uint64_t)(st_ptr)->st_ctime * 10000000ULL) + 116444736000000000ULL; \
+            (has_ctime_var) = 1; \
+        } while(0)
+    #else
+        #define CAPTURE_CTIME(st_ptr, ctime_var, has_ctime_var) do { (ctime_var) = 0; (has_ctime_var) = 0; } while(0)
+    #endif
 #endif
 
 /* 7z format constants */
@@ -65,6 +84,8 @@ typedef enum {
     k7zIdNumUnpackStream = 0x0D,
     k7zIdEmptyStream = 0x0E,
     k7zIdName = 0x11,
+    k7zIdCTime = 0x12,
+    k7zIdATime = 0x13,
     k7zIdMTime = 0x14,
     k7zIdWinAttrib = 0x15
 } E7zIdEnum;
@@ -72,13 +93,21 @@ typedef enum {
 /* File entry for multi-volume archives */
 typedef struct {
     char* name;
-    char* full_path;  /* Full path for reading the file */
+    char* full_path;       /* Full path for reading the file */
+    char* original_path;   /* Original path (for forensic manifest) */
     uint64_t size;
-    uint64_t mtime;
+    uint64_t mtime;        /* Modification time (Windows FILETIME) */
+    uint64_t ctime;        /* Creation time (Windows FILETIME) */
+    uint64_t atime;        /* Access time (Windows FILETIME) */
     uint32_t attrib;
     uint32_t crc;
-    Byte lzma2_prop;  /* LZMA2 property byte for this file */
+    uint32_t uid;          /* Owner user ID (Unix) */
+    uint32_t gid;          /* Owner group ID (Unix) */
+    uint16_t mode;         /* Unix file permissions */
+    Byte lzma2_prop;       /* LZMA2 property byte for this file */
     int is_dir;
+    int has_ctime;         /* Whether creation time is available */
+    int has_atime;         /* Whether access time is available */
 } MV_FileEntry;
 
 /* File list for gathering entries */
@@ -102,6 +131,7 @@ static void mv_file_list_free(MV_FileList* list) {
     for (size_t i = 0; i < list->count; i++) {
         free(list->entries[i].name);
         free(list->entries[i].full_path);
+        free(list->entries[i].original_path);
     }
     free(list->entries);
     list->entries = NULL;
@@ -110,7 +140,10 @@ static void mv_file_list_free(MV_FileList* list) {
 }
 
 /* Add file to list */
-static int mv_file_list_add(MV_FileList* list, const char* full_path, const char* archive_name, uint64_t size, uint64_t mtime, uint32_t attrib) {
+static int mv_file_list_add(MV_FileList* list, const char* full_path, const char* archive_name,
+                             uint64_t size, uint64_t mtime, uint32_t attrib,
+                             uint64_t ctime, uint64_t atime, uint32_t uid, uint32_t gid,
+                             uint16_t mode, int has_ctime, int has_atime) {
     if (list->count >= list->capacity) {
         size_t new_cap = list->capacity == 0 ? 64 : list->capacity * 2;
         MV_FileEntry* new_entries = (MV_FileEntry*)realloc(list->entries, new_cap * sizeof(MV_FileEntry));
@@ -123,9 +156,17 @@ static int mv_file_list_add(MV_FileList* list, const char* full_path, const char
     memset(entry, 0, sizeof(MV_FileEntry));
     entry->full_path = strdup(full_path);
     entry->name = strdup(archive_name);
+    entry->original_path = strdup(full_path);
     entry->size = size;
     entry->mtime = mtime;
     entry->attrib = attrib;
+    entry->ctime = ctime;
+    entry->atime = atime;
+    entry->uid = uid;
+    entry->gid = gid;
+    entry->mode = mode;
+    entry->has_ctime = has_ctime;
+    entry->has_atime = has_atime;
     entry->is_dir = 0;
     
     list->count++;
@@ -155,13 +196,28 @@ static int mv_gather_files(const char* path, const char* base_name, MV_FileList*
         /* Convert Unix time to Windows FILETIME */
         uint64_t mtime = ((uint64_t)st.st_mtime * 10000000ULL) + 116444736000000000ULL;
         
+        /* Capture creation time (birth time on macOS, fallback to ctime on Linux) */
+        uint64_t ctime = 0;
+        int has_ctime = 0;
+        CAPTURE_CTIME(&st, ctime, has_ctime);
+        
+        /* Capture access time */
+        uint64_t atime = ((uint64_t)st.st_atime * 10000000ULL) + 116444736000000000ULL;
+        int has_atime = 1;
+        
+        /* Capture Unix permissions */
+        uint32_t uid = (uint32_t)st.st_uid;
+        uint32_t gid = (uint32_t)st.st_gid;
+        uint16_t mode = (uint16_t)(st.st_mode & 07777);
+        
         /* Set attributes */
         uint32_t attrib = 0x20;  /* FILE_ATTRIBUTE_ARCHIVE */
         if (!(st.st_mode & S_IWUSR)) {
             attrib |= 0x01;  /* FILE_ATTRIBUTE_READONLY */
         }
         
-        return mv_file_list_add(list, path, name, st.st_size, mtime, attrib);
+        return mv_file_list_add(list, path, name, st.st_size, mtime, attrib,
+                                 ctime, atime, uid, gid, mode, has_ctime, has_atime);
     } else if (S_ISDIR(st.st_mode)) {
         return mv_gather_directory(path, base_name, list);
     }
@@ -613,9 +669,9 @@ static int is_data_compressible(const Byte* data, size_t size) {
         if (freq[i] > threshold) unique_bytes++;
     }
     
-    /* If >200 unique bytes appear frequently, data is likely incompressible (random/encrypted) */
+    /* If >220 unique bytes appear frequently, data is likely incompressible (random/encrypted) */
     /* Typical text has ~60-100 unique frequent bytes */
-    return unique_bytes < 200;
+    return unique_bytes < 220;
 }
 
 /* Store file without compression (fast copy) */
@@ -1092,6 +1148,57 @@ static SRes compress_solid_streaming(
     return res;
 }
 
+/* Calculate the exact required buffer size for the 7z header.
+ * This prevents heap buffer overflow when archiving many files or files
+ * with long path names. The old fixed 256KB buffer would overflow with
+ * ~625+ files (assuming 200-char average paths), corrupting the heap. */
+static size_t calc_7z_header_size(
+    MV_FileEntry* files,
+    size_t file_count
+) {
+    size_t size = 0;
+    
+    /* Fixed header overhead: k7zIdHeader, MainStreamsInfo markers, PackInfo,
+     * UnpackInfo (folder/coder info), SubStreamsInfo markers, FilesInfo markers,
+     * end markers. Conservative estimate for all fixed fields + WriteNumber
+     * calls (each up to 9 bytes). */
+    size += 128;
+    
+    /* SubStreamsInfo: individual file sizes (WriteNumber per non-dir file) */
+    size_t num_files = 0;
+    for (size_t i = 0; i < file_count; i++) {
+        if (!files[i].is_dir) num_files++;
+    }
+    size += num_files * 9;  /* WriteNumber max 9 bytes each */
+    
+    /* CRC values: 4 bytes per non-dir file + 2 bytes overhead */
+    size += 2 + num_files * 4;
+    
+    /* FilesInfo Names (UTF-16LE): proper UTF-8 to UTF-16LE size per file
+     * Plus WriteNumber for total names_size, plus External flag byte */
+    size += 9 + 1;  /* WriteNumber(names_size) + External flag */
+    for (size_t i = 0; i < file_count; i++) {
+        size += utf8_to_utf16le_size(files[i].name);
+    }
+    
+    /* MTime: 8 bytes per file + WriteNumber(size) + AllDefined + External */
+    size += 1 + 9 + 1 + 1 + file_count * 8;
+    
+    /* CTime (Creation Time): 8 bytes per file + WriteNumber(size) + AllDefined + External */
+    size += 1 + 9 + 1 + 1 + file_count * 8;
+    
+    /* ATime (Access Time): 8 bytes per file + WriteNumber(size) + AllDefined + External */
+    size += 1 + 9 + 1 + 1 + file_count * 8;
+    
+    /* WinAttrib: 4 bytes per file + WriteNumber(size) + AllDefined + External */
+    size += 1 + 9 + 1 + 1 + file_count * 4;
+    
+    /* End markers */
+    size += 4;
+    
+    return size;
+}
+
 /* Build 7z header in memory */
 static Byte* build_7z_header(
     MV_FileEntry* files,
@@ -1099,11 +1206,29 @@ static Byte* build_7z_header(
     uint64_t total_packed_size,
     size_t* header_size
 ) {
-    size_t capacity = 256 * 1024;  /* 256KB buffer */
+    /* Pre-calculate required size to prevent buffer overflow */
+    size_t required = calc_7z_header_size(files, file_count);
+    size_t capacity = required + (required / 4) + 1024;  /* +25% safety margin + 1KB */
+    if (capacity < 4096) capacity = 4096;  /* Minimum 4KB */
+    
     Byte* header = (Byte*)malloc(capacity);
     if (!header) return NULL;
     
     Byte* p = header;
+    Byte* end = header + capacity;
+    
+    /* Macro to check remaining space before writing N bytes */
+    #define CHECK_SPACE(n) do { \
+        if ((size_t)(end - p) < (size_t)(n)) { \
+            fprintf(stderr, "[ERROR] build_7z_header: buffer overflow prevented " \
+                    "(need %zu bytes, have %zu remaining, capacity %zu)\n", \
+                    (size_t)(n), (size_t)(end - p), capacity); \
+            free(header); \
+            return NULL; \
+        } \
+    } while(0)
+    
+    CHECK_SPACE(64);  /* Fixed header fields */
     
     *p++ = k7zIdHeader;
     
@@ -1176,6 +1301,9 @@ static Byte* build_7z_header(
         if (!files[i].is_dir) num_files++;
     }
     
+    /* Check space for NumUnpackStream + file sizes + CRCs */
+    CHECK_SPACE(20 + num_files * 13 + num_files * 4);
+    
     /* Always emit NumUnpackStream (like working 7z_create.c) */
     *p++ = k7zIdNumUnpackStream;
     WriteNumber(&p, num_files);
@@ -1212,19 +1340,15 @@ static Byte* build_7z_header(
     *p++ = k7zIdName;
     size_t names_size = 0;
     for (size_t i = 0; i < file_count; i++) {
-        names_size += (strlen(files[i].name) + 1) * 2;
+        names_size += utf8_to_utf16le_size(files[i].name);
     }
+    /* Check space for names data + MTime + CTime + ATime + WinAttrib + end markers */
+    CHECK_SPACE(names_size + 11 + file_count * 28 + 48);
     WriteNumber(&p, names_size + 1);
     *p++ = 0;  /* Not external */
     
     for (size_t i = 0; i < file_count; i++) {
-        const char* name = files[i].name;
-        while (*name) {
-            *p++ = (Byte)*name++;
-            *p++ = 0;
-        }
-        *p++ = 0;
-        *p++ = 0;
+        p += utf8_to_utf16le(p, files[i].name);
     }
     
     /* MTime (Modification Time) */
@@ -1234,6 +1358,28 @@ static Byte* build_7z_header(
     *p++ = 0;  /* External = 0 (inline data) */
     for (size_t i = 0; i < file_count; i++) {
         memcpy(p, &files[i].mtime, 8);
+        p += 8;
+    }
+    
+    /* CTime (Creation Time) */
+    *p++ = k7zIdCTime;
+    WriteNumber(&p, file_count * 8 + 2);
+    *p++ = 1;  /* All defined */
+    *p++ = 0;  /* External = 0 (inline data) */
+    for (size_t i = 0; i < file_count; i++) {
+        uint64_t ct = files[i].has_ctime ? files[i].ctime : files[i].mtime;
+        memcpy(p, &ct, 8);
+        p += 8;
+    }
+    
+    /* ATime (Access Time) */
+    *p++ = k7zIdATime;
+    WriteNumber(&p, file_count * 8 + 2);
+    *p++ = 1;  /* All defined */
+    *p++ = 0;  /* External = 0 (inline data) */
+    for (size_t i = 0; i < file_count; i++) {
+        uint64_t at = files[i].has_atime ? files[i].atime : files[i].mtime;
+        memcpy(p, &at, 8);
         p += 8;
     }
     
@@ -1251,6 +1397,9 @@ static Byte* build_7z_header(
     *p++ = k7zIdEnd;  /* End Header */
     
     *header_size = p - header;
+    
+    #undef CHECK_SPACE
+    
     return header;
 }
 
@@ -1297,7 +1446,7 @@ SevenZipErrorCode sevenzip_create_multivolume_7z_complete(
             file_capacity *= 2; \
             MV_FileEntry* new_files = (MV_FileEntry*)realloc(files, file_capacity * sizeof(MV_FileEntry)); \
             if (!new_files) { \
-                for (size_t _i = 0; _i < file_count; _i++) { free(files[_i].name); free(files[_i].full_path); } \
+                for (size_t _i = 0; _i < file_count; _i++) { free(files[_i].name); free(files[_i].full_path); free(files[_i].original_path); } \
                 free(files); \
                 free(ctx.volumes); \
                 return SEVENZIP_ERROR_MEMORY; \
@@ -1308,10 +1457,17 @@ SevenZipErrorCode sevenzip_create_multivolume_7z_complete(
         memset(entry, 0, sizeof(MV_FileEntry)); \
         entry->name = strdup(relative_name_str); \
         entry->full_path = strdup(full_path_str); \
+        entry->original_path = strdup(full_path_str); \
         struct STAT _st; \
         STAT(full_path_str, &_st); \
         entry->size = _st.st_size; \
         entry->mtime = ((uint64_t)_st.st_mtime * 10000000ULL) + 116444736000000000ULL; \
+        entry->atime = ((uint64_t)_st.st_atime * 10000000ULL) + 116444736000000000ULL; \
+        entry->has_atime = 1; \
+        CAPTURE_CTIME(&_st, entry->ctime, entry->has_ctime); \
+        entry->uid = (uint32_t)_st.st_uid; \
+        entry->gid = (uint32_t)_st.st_gid; \
+        entry->mode = (uint16_t)(_st.st_mode & 07777); \
         entry->attrib = 0x20; \
         if (!(_st.st_mode & S_IWUSR)) entry->attrib |= 0x01; \
         entry->is_dir = 0; \
@@ -1609,6 +1765,7 @@ SevenZipErrorCode sevenzip_create_multivolume_7z_complete(
     for (size_t i = 0; i < file_count; i++) {
         free(files[i].name);
         free(files[i].full_path);
+        free(files[i].original_path);
     }
     free(files);
     free(ctx.volumes);
@@ -1622,6 +1779,7 @@ error:
     for (size_t i = 0; i < file_count; i++) {
         free(files[i].name);
         free(files[i].full_path);
+        free(files[i].original_path);
     }
     free(files);
     free(ctx.volumes);

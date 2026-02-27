@@ -365,3 +365,20 @@ SevenZipErrorCode sevenzip_extract_streaming(
     
     return (res == SZ_OK) ? SEVENZIP_OK : SEVENZIP_ERROR_EXTRACT;
 }
+
+/**
+ * Extract a split/multi-volume 7z archive (.7z.001, .7z.002, etc.)
+ * This is an alias that delegates to sevenzip_extract_streaming which already
+ * supports split archives.
+ */
+SevenZipErrorCode sevenzip_extract_split_archive(
+    const char* first_volume_path,
+    const char* output_dir,
+    const char* password,
+    SevenZipBytesProgressCallback progress_callback,
+    void* user_data
+) {
+    // Delegate to streaming extraction which handles split archives
+    return sevenzip_extract_streaming(first_volume_path, output_dir, password, 
+                                       progress_callback, user_data);
+}

@@ -24,6 +24,8 @@
     #define PATH_SEPARATOR '/'
 #endif
 
+#define kInputBufSize ((size_t)1 << 18)  /* 256 KB buffer */
+
 /* Create directory recursively */
 static int create_directory_recursive(const char* path) {
     char* tmp = strdup(path);
@@ -104,7 +106,6 @@ SevenZipErrorCode sevenzip_extract(
     /* Open archive file */
     CFileInStream archive_stream;
     CLookToRead2 look_stream;
-    const size_t kInputBufSize = ((size_t)1 << 18);
     
     if (InFile_Open(&archive_stream.file, archive_path) != 0) {
         return SEVENZIP_ERROR_OPEN_FILE;
@@ -263,6 +264,179 @@ SevenZipErrorCode sevenzip_extract_files(
     SevenZipProgressCallback progress_callback,
     void* user_data
 ) {
-    /* TODO: Implement selective file extraction */
-    return SEVENZIP_ERROR_NOT_IMPLEMENTED;
+    if (!archive_path || !output_dir || !files) {
+        return SEVENZIP_ERROR_INVALID_PARAM;
+    }
+
+    /* Count number of files to extract */
+    size_t num_files_to_extract = 0;
+    while (files[num_files_to_extract] != NULL) {
+        num_files_to_extract++;
+    }
+    
+    if (num_files_to_extract == 0) {
+        return SEVENZIP_ERROR_INVALID_PARAM;
+    }
+
+    /* Initialize LZMA */
+    ISzAlloc alloc_imp = { SzAlloc, SzFree };
+    ISzAlloc alloc_tmp = { SzAllocTemp, SzFreeTemp };
+    
+    CFileInStream archive_stream;
+    CLookToRead2 look_stream;
+    CSzArEx db;
+    SRes res;
+    
+    /* Open archive */
+    if (InFile_Open(&archive_stream.file, archive_path)) {
+        return SEVENZIP_ERROR_OPEN_FILE;
+    }
+    
+    FileInStream_CreateVTable(&archive_stream);
+    LookToRead2_CreateVTable(&look_stream, False);
+    look_stream.buf = ISzAlloc_Alloc(&alloc_imp, kInputBufSize);
+    if (!look_stream.buf) {
+        File_Close(&archive_stream.file);
+        return SEVENZIP_ERROR_MEMORY;
+    }
+    
+    look_stream.bufSize = kInputBufSize;
+    look_stream.realStream = &archive_stream.vt;
+    LookToRead2_INIT(&look_stream)
+    
+    SzArEx_Init(&db);
+    res = SzArEx_Open(&db, &look_stream.vt, &alloc_imp, &alloc_tmp);
+    
+    if (res != SZ_OK) {
+        ISzAlloc_Free(&alloc_imp, look_stream.buf);
+        File_Close(&archive_stream.file);
+        return (res == SZ_ERROR_MEM) ? SEVENZIP_ERROR_MEMORY : SEVENZIP_ERROR_INVALID_ARCHIVE;
+    }
+    
+    SevenZipErrorCode error_code = SEVENZIP_OK;
+    UInt32 block_index = 0xFFFFFFFF;
+    Byte *out_buffer = NULL;
+    size_t out_buffer_size = 0;
+    
+    size_t extracted_count = 0;
+    
+    /* Iterate through archive entries */
+    for (UInt32 i = 0; i < db.NumFiles; i++) {
+        size_t offset = 0;
+        size_t out_size_processed = 0;
+        size_t len;
+        unsigned is_dir;
+        
+        len = SzArEx_GetFileNameUtf16(&db, i, NULL);
+        if (len > 4096) continue;
+        
+        UInt16 *name_utf16 = (UInt16 *)malloc(len * sizeof(UInt16));
+        if (!name_utf16) continue;
+        
+        SzArEx_GetFileNameUtf16(&db, i, name_utf16);
+        
+        /* Convert UTF-16 to UTF-8 */
+        char name[4096];
+        size_t name_idx = 0;
+        for (size_t j = 0; j < len && name_idx < sizeof(name) - 1; j++) {
+            if (name_utf16[j] < 0x80) {
+                name[name_idx++] = (char)name_utf16[j];
+            } else {
+                /* Simple conversion - just use ASCII approximation */
+                name[name_idx++] = '?';
+            }
+        }
+        name[name_idx] = '\0';
+        free(name_utf16);
+        
+        /* Check if this file should be extracted */
+        int should_extract = 0;
+        for (size_t j = 0; j < num_files_to_extract; j++) {
+            if (strcmp(name, files[j]) == 0) {
+                should_extract = 1;
+                break;
+            }
+        }
+        
+        if (!should_extract) continue;
+        
+        is_dir = SzArEx_IsDir(&db, i);
+        
+        if (is_dir) {
+            /* Create directory */
+            char full_path[4096];
+            snprintf(full_path, sizeof(full_path), "%s/%s", output_dir, name);
+            
+            #ifdef _WIN32
+            _mkdir(full_path);
+            #else
+            mkdir(full_path, 0755);
+            #endif
+            
+            extracted_count++;
+            continue;
+        }
+        
+        /* Extract file */
+        res = SzArEx_Extract(&db, &look_stream.vt, i, &block_index, &out_buffer,
+                            &out_buffer_size, &offset, &out_size_processed,
+                            &alloc_imp, &alloc_tmp);
+        
+        if (res != SZ_OK) {
+            error_code = SEVENZIP_ERROR_EXTRACT;
+            break;
+        }
+        
+        /* Write to output file */
+        char full_path[4096];
+        snprintf(full_path, sizeof(full_path), "%s/%s", output_dir, name);
+        
+        /* Create parent directories */
+        char *last_slash = strrchr(full_path, '/');
+        if (last_slash) {
+            *last_slash = '\0';
+            #ifdef _WIN32
+            _mkdir(full_path);
+            #else
+            mkdir(full_path, 0755);
+            #endif
+            *last_slash = '/';
+        }
+        
+        FILE *out_file = fopen(full_path, "wb");
+        if (!out_file) {
+            error_code = SEVENZIP_ERROR_EXTRACT;
+            break;
+        }
+        
+        size_t written = fwrite(out_buffer + offset, 1, out_size_processed, out_file);
+        fclose(out_file);
+        
+        if (written != out_size_processed) {
+            error_code = SEVENZIP_ERROR_EXTRACT;
+            break;
+        }
+        
+        extracted_count++;
+        
+        /* Progress callback */
+        if (progress_callback) {
+            progress_callback(extracted_count, num_files_to_extract, user_data);
+        }
+        
+        /* Stop if we've extracted all requested files */
+        if (extracted_count >= num_files_to_extract) {
+            break;
+        }
+    }
+    
+    if (out_buffer) {
+        ISzAlloc_Free(&alloc_imp, out_buffer);
+    }
+    
+    SzArEx_Free(&db, &alloc_imp);
+    ISzAlloc_Free(&alloc_imp, look_stream.buf);
+    File_Close(&archive_stream.file);
+    
+    return error_code;
 }

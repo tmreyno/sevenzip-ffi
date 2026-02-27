@@ -257,6 +257,20 @@ extern "C" {
         user_data: *mut c_void,
     ) -> SevenZipErrorCode;
 
+    /// Repair corrupted 7z archive
+    pub fn sevenzip_repair_archive(
+        corrupted_path: *const c_char,
+        repaired_path: *const c_char,
+        progress_callback: SevenZipProgressCallback,
+        user_data: *mut c_void,
+    ) -> SevenZipErrorCode;
+
+    /// Validate archive integrity without extracting (thorough check)
+    pub fn sevenzip_validate_archive(
+        archive_path: *const c_char,
+        error_info: *mut SevenZipErrorInfo,
+    ) -> SevenZipErrorCode;
+
     // ============================================================================
     // Single File Compression/Decompression
     // ============================================================================

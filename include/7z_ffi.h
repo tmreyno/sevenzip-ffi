@@ -32,6 +32,9 @@ typedef enum {
     SEVENZIP_ERROR_UNKNOWN = 99
 } SevenZipErrorCode;
 
+/* Forward declaration (full definition later in this header) */
+typedef struct SevenZipErrorInfo SevenZipErrorInfo;
+
 /* Archive entry information */
 typedef struct {
     char* name;              /* File name (UTF-8) */
@@ -71,12 +74,34 @@ typedef enum {
     SEVENZIP_LEVEL_ULTRA = 9       /* Ultra compression */
 } SevenZipCompressionLevel;
 
+/* Filter types for preprocessing */
+typedef enum {
+    SEVENZIP_FILTER_NONE = 0,     /* No filter */
+    SEVENZIP_FILTER_BCJ = 1,      /* x86 BCJ filter (simple) */
+    SEVENZIP_FILTER_BCJ2 = 2,     /* x86 BCJ2 filter (better compression) */
+    SEVENZIP_FILTER_ARM = 3,      /* ARM filter */
+    SEVENZIP_FILTER_ARM64 = 4,    /* ARM64 filter */
+    SEVENZIP_FILTER_ARMT = 5,     /* ARM Thumb filter */
+    SEVENZIP_FILTER_IA64 = 6,     /* IA64 (Itanium) filter */
+    SEVENZIP_FILTER_PPC = 7,      /* PowerPC filter */
+    SEVENZIP_FILTER_SPARC = 8,    /* SPARC filter */
+    SEVENZIP_FILTER_DELTA = 9     /* Delta filter (for multimedia) */
+} SevenZipFilterType;
+
+/* Filter configuration options */
+typedef struct {
+    SevenZipFilterType type;   /* Filter type to use */
+    uint32_t delta;            /* Delta distance (for Delta filter, 1-256, default: 1) */
+    uint32_t alignment;        /* Address alignment (for BCJ filters, 0 = auto) */
+} SevenZipFilterOptions;
+
 /* Advanced compression options */
 typedef struct {
     int num_threads;           /* Number of threads (0 = auto, default: 2) */
     uint64_t dict_size;        /* Dictionary size in bytes (0 = auto) */
     int solid;                 /* Solid archive (1 = yes, 0 = no, default: 1) */
     const char* password;      /* Password for encryption (NULL = no encryption) */
+    SevenZipFilterOptions* filter; /* Optional filter (NULL = no filter) */
 } SevenZipCompressOptions;
 
 /* Streaming compression options for large files and split archives */
@@ -282,6 +307,42 @@ SEVENZIP_API SevenZipErrorCode sevenzip_decompress_lzma2(
 );
 
 /**
+ * Compress a file to standalone LZMA format (.lzma)
+ * Output format: 5 bytes props + 8 bytes uncompressed size (LE) + compressed data
+ * @param input_path Path to the input file to compress
+ * @param output_path Path for the output .lzma file
+ * @param level Compression level
+ * @param progress_callback Optional progress callback (NULL to disable)
+ * @param user_data User data passed to progress callback
+ * @return SEVENZIP_OK on success, error code otherwise
+ */
+SEVENZIP_API SevenZipErrorCode sevenzip_compress_lzma(
+    const char* input_path,
+    const char* output_path,
+    SevenZipCompressionLevel level,
+    SevenZipProgressCallback progress_callback,
+    void* user_data
+);
+
+/**
+ * Compress a file to standalone LZMA2 format
+ * Output format: 1 byte LZMA2 property + LZMA2 compressed data
+ * @param input_path Path to the input file to compress
+ * @param output_path Path for the output file
+ * @param level Compression level
+ * @param progress_callback Optional progress callback (NULL to disable)
+ * @param user_data User data passed to progress callback
+ * @return SEVENZIP_OK on success, error code otherwise
+ */
+SEVENZIP_API SevenZipErrorCode sevenzip_compress_lzma2(
+    const char* input_path,
+    const char* output_path,
+    SevenZipCompressionLevel level,
+    SevenZipProgressCallback progress_callback,
+    void* user_data
+);
+
+/**
  * Get error message for error code
  * @param error_code Error code
  * @return Human-readable error message
@@ -379,6 +440,111 @@ SEVENZIP_API SevenZipErrorCode sevenzip_extract_streaming(
     SevenZipBytesProgressCallback progress_callback,
     void* user_data
 );
+
+/**
+ * Extract split/multi-volume 7z archive
+ * Automatically handles .7z.001, .7z.002, etc. volumes
+ * 
+ * @param first_volume_path Path to first volume (e.g., "archive.7z.001")
+ * @param output_dir Directory to extract to
+ * @param password Optional password (NULL if not encrypted)
+ * @param progress_callback Optional progress callback (NULL to disable)
+ * @param user_data User data passed to progress callback
+ * @return SEVENZIP_OK on success, error code otherwise
+ */
+SEVENZIP_API SevenZipErrorCode sevenzip_extract_split_archive(
+    const char* first_volume_path,
+    const char* output_dir,
+    const char* password,
+    SevenZipBytesProgressCallback progress_callback,
+    void* user_data
+);
+
+/**
+ * Repair corrupted 7z archive
+ * Attempts to recover as much data as possible from a damaged archive
+ * 
+ * @param corrupted_path Path to corrupted archive
+ * @param repaired_path Path for repaired archive output
+ * @param progress_callback Optional progress callback (NULL to disable)
+ * @param user_data User data passed to progress callback
+ * @return SEVENZIP_OK if repair successful, error code otherwise
+ */
+SEVENZIP_API SevenZipErrorCode sevenzip_repair_archive(
+    const char* corrupted_path,
+    const char* repaired_path,
+    SevenZipProgressCallback progress_callback,
+    void* user_data
+);
+
+/**
+ * Validate archive integrity without extracting
+ * More thorough than sevenzip_test_archive - checks structure and headers
+ * 
+ * @param archive_path Path to archive
+ * @param error_info Output buffer for detailed error info (NULL if not needed)
+ * @return SEVENZIP_OK if valid, error code with details otherwise
+ */
+SEVENZIP_API SevenZipErrorCode sevenzip_validate_archive(
+    const char* archive_path,
+    SevenZipErrorInfo* error_info
+);
+
+/**
+ * ============================================================================
+ * Filter Functions (BCJ, BCJ2, ARM, Delta, etc.)
+ * ============================================================================
+ */
+
+/**
+ * Apply filter to data buffer
+ * Filters improve compression ratio for specific data types
+ * 
+ * @param data Input/output buffer
+ * @param size Size of data in bytes
+ * @param filter Filter options
+ * @return SEVENZIP_OK on success, error code otherwise
+ */
+SEVENZIP_API SevenZipErrorCode sevenzip_apply_filter(
+    uint8_t* data,
+    size_t size,
+    const SevenZipFilterOptions* filter
+);
+
+/**
+ * Reverse filter application (for decompression)
+ * 
+ * @param data Input/output buffer
+ * @param size Size of data in bytes
+ * @param filter Filter options
+ * @return SEVENZIP_OK on success, error code otherwise
+ */
+SEVENZIP_API SevenZipErrorCode sevenzip_reverse_filter(
+    uint8_t* data,
+    size_t size,
+    const SevenZipFilterOptions* filter
+);
+
+/**
+ * Detect appropriate filter for data
+ * Analyzes data to suggest best filter
+ * 
+ * @param data Data buffer to analyze
+ * @param size Size of data in bytes
+ * @return Suggested filter type
+ */
+SEVENZIP_API SevenZipFilterType sevenzip_detect_filter(
+    const uint8_t* data,
+    size_t size
+);
+
+/**
+ * Get human-readable name for filter type
+ * 
+ * @param type Filter type
+ * @return Filter name string
+ */
+SEVENZIP_API const char* sevenzip_filter_name(SevenZipFilterType type);
 
 /**
  * ============================================================================
@@ -495,13 +661,13 @@ SEVENZIP_API SevenZipErrorCode sevenzip_verify_password(
 /**
  * Detailed error information structure
  */
-typedef struct {
+struct SevenZipErrorInfo {
     SevenZipErrorCode code;           /* Error code */
     char message[512];                 /* Error message */
     char file_context[256];            /* File being processed when error occurred */
     int64_t position;                  /* Position in file/archive (-1 if N/A) */
     char suggestion[256];              /* Actionable suggestion to fix the error */
-} SevenZipErrorInfo;
+};
 
 /**
  * Get detailed information about the last error
@@ -525,6 +691,146 @@ SEVENZIP_API void sevenzip_clear_last_error(void);
  * @return Static string describing the error (never NULL)
  */
 SEVENZIP_API const char* sevenzip_get_error_string(SevenZipErrorCode code);
+
+/**
+ * ============================================================================
+ * Enhanced Features for FFI (JavaScript/Rust/WebAssembly)
+ * ============================================================================
+ */
+
+/**
+ * Compress buffer to 7z in-memory (no file I/O)
+ * Perfect for JavaScript/WebAssembly/Rust FFI
+ * 
+ * @param input Input data buffer
+ * @param input_size Size of input data
+ * @param output Output buffer (caller allocated)
+ * @param output_size Input: output buffer size, Output: actual compressed size
+ * @param level Compression level (0-9)
+ * @return SEVENZIP_OK on success
+ */
+SEVENZIP_API SevenZipErrorCode sevenzip_compress_buffer(
+    const uint8_t* input,
+    size_t input_size,
+    uint8_t* output,
+    size_t* output_size,
+    int level
+);
+
+/**
+ * Decompress 7z buffer in-memory (no file I/O)
+ * 
+ * @param input Compressed data buffer
+ * @param input_size Size of compressed data
+ * @param output Output buffer (caller allocated)
+ * @param output_size Input: output buffer size, Output: actual decompressed size
+ * @return SEVENZIP_OK on success
+ */
+SEVENZIP_API SevenZipErrorCode sevenzip_decompress_buffer(
+    const uint8_t* input,
+    size_t input_size,
+    uint8_t* output,
+    size_t* output_size
+);
+
+/**
+ * Get maximum compressed size for given input size
+ * Use for buffer allocation before compress_buffer
+ * 
+ * @param input_size Size of uncompressed data
+ * @return Maximum possible compressed size
+ */
+SEVENZIP_API size_t sevenzip_compress_bound(size_t input_size);
+
+/**
+ * XZ Format Support (widely used in Linux/Unix)
+ * ============================================================================
+ */
+
+/**
+ * Compress to XZ format (LZMA2 + CRC64)
+ * Lighter format than 7z, better for streaming
+ * 
+ * @param input Input data
+ * @param input_size Input size
+ * @param output Output buffer
+ * @param output_size Output size
+ * @param level Compression level (0-9)
+ * @return SEVENZIP_OK on success
+ */
+SEVENZIP_API SevenZipErrorCode sevenzip_compress_xz(
+    const uint8_t* input,
+    size_t input_size,
+    uint8_t* output,
+    size_t* output_size,
+    int level
+);
+
+/**
+ * Decompress XZ format
+ * 
+ * @param input Compressed XZ data
+ * @param input_size Input size
+ * @param output Output buffer
+ * @param output_size Output size
+ * @return SEVENZIP_OK on success
+ */
+SEVENZIP_API SevenZipErrorCode sevenzip_decompress_xz(
+    const uint8_t* input,
+    size_t input_size,
+    uint8_t* output,
+    size_t* output_size
+);
+
+/**
+ * Get library version information
+ * 
+ * @param major Output: major version
+ * @param minor Output: minor version
+ * @param patch Output: patch version
+ */
+SEVENZIP_API void sevenzip_version(int* major, int* minor, int* patch);
+
+/**
+ * Get LZMA SDK version string
+ * 
+ * @return Version string (e.g., "23.01")
+ */
+SEVENZIP_API const char* sevenzip_lzma_version(void);
+
+/* ============================================================================
+ * Forensic Manifest Generation
+ * ============================================================================ */
+
+/**
+ * Generate a forensic manifest JSON file for a set of input files/directories.
+ *
+ * The manifest contains per-file metadata critical for forensic provenance:
+ *   - SHA-256 hash (computed using LZMA SDK's hardware-accelerated implementation)
+ *   - Original absolute path on the source system
+ *   - All timestamps: modified, created (birth/ctime), accessed (ISO 8601)
+ *   - Unix permissions: uid, gid, mode (octal)
+ *   - POSIX ACLs (text representation)
+ *   - Extended attributes (names + hex-encoded values)
+ *   - Source label and acquisition host metadata
+ *
+ * Usage: Call this before archive creation. Include the output manifest file
+ * as the first entry in the 7z archive for self-contained provenance.
+ *
+ * @param output_path       Path where the .forensic-manifest.json will be written
+ * @param input_paths       NULL-terminated array of file/directory paths to document
+ * @param source_label      Source provenance label (e.g., "Case 2024-001 Evidence")
+ * @param progress_callback Optional progress callback (NULL to disable)
+ * @param user_data         User data passed to progress callback
+ * @return SEVENZIP_OK on success, error code on failure
+ */
+SEVENZIP_API SevenZipErrorCode sevenzip_generate_forensic_manifest(
+    const char* output_path,
+    const char** input_paths,
+    const char* source_label,
+    SevenZipBytesProgressCallback progress_callback,
+    void* user_data
+);
 
 #ifdef __cplusplus
 }

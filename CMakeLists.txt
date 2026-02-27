@@ -80,9 +80,17 @@ set(FFI_SOURCES
     src/archive_test.c
     src/archive_stream_api.c
     
-    # Compression
+    # Forensic support
+    src/forensic_manifest.c
+    
+    # Compression & Filters
     src/lzma_compress.c
     src/lzma_decompress.c
+    src/filters.c
+    src/buffer_compression.c
+    
+    # Archive repair & validation
+    src/archive_repair.c
     
     # Security
     src/encryption_aes.c
@@ -111,11 +119,12 @@ elseif(UNIX)
     target_link_libraries(7z_ffi PRIVATE pthread)
     
     # Enable ARM optimizations on Apple Silicon / ARM64
+    # NOTE: MY_CPU_ARM64 is auto-detected by CpuArch.h in SDK 24.09+ from __aarch64__
+    # so we only need to enable the ISA extensions via compiler flags.
     if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm64|aarch64|ARM64")
         message(STATUS "Enabling ARM64 optimizations (CRC32, NEON)")
         target_compile_options(7z_ffi PRIVATE -march=armv8-a+crc+crypto)
         target_compile_definitions(7z_ffi PRIVATE 
-            MY_CPU_ARM64
             __ARM_FEATURE_CRC32=1
         )
     endif()
