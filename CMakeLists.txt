@@ -112,6 +112,8 @@ if(WIN32)
     target_compile_definitions(7z_ffi PRIVATE _FILE_OFFSET_BITS=64 _LARGEFILE_SOURCE)
     if(BUILD_SHARED_LIBS)
         target_compile_definitions(7z_ffi PRIVATE DLL_EXPORT)
+    else()
+        target_compile_definitions(7z_ffi PUBLIC SEVENZIP_STATIC)
     endif()
 elseif(UNIX)
     # Enable multi-threading and optimizations for Unix/macOS

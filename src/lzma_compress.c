@@ -9,7 +9,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <sys/stat.h>
-#include <dirent.h>
 
 #ifdef _WIN32
     #include <windows.h>

@@ -27,7 +27,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <sys/stat.h>
-#include <dirent.h>
 #include <time.h>
 
 #ifdef _WIN32

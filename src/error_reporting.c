@@ -9,32 +9,71 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <pthread.h>
 
-/* Thread-local error context */
-static pthread_key_t error_key;
-static pthread_once_t error_key_once = PTHREAD_ONCE_INIT;
+#ifdef _WIN32
+    #include <windows.h>
 
-/* Initialize thread-local storage key */
-static void make_error_key(void) {
-    pthread_key_create(&error_key, free);
-}
+    /* Thread-local error context using Windows TLS */
+    static DWORD error_tls_index = TLS_OUT_OF_INDEXES;
+    static volatile LONG error_tls_init = 0;
 
-/* Get thread-local error info (creates if doesn't exist) */
-static SevenZipErrorInfo* get_error_info(void) {
-    pthread_once(&error_key_once, make_error_key);
-    
-    SevenZipErrorInfo* info = (SevenZipErrorInfo*)pthread_getspecific(error_key);
-    if (!info) {
-        info = (SevenZipErrorInfo*)calloc(1, sizeof(SevenZipErrorInfo));
-        if (info) {
-            info->code = SEVENZIP_OK;
-            info->position = -1;
-            pthread_setspecific(error_key, info);
+    /* Initialize TLS slot (thread-safe via InterlockedCompareExchange) */
+    static void ensure_error_tls(void) {
+        if (error_tls_index == TLS_OUT_OF_INDEXES) {
+            if (InterlockedCompareExchange(&error_tls_init, 1, 0) == 0) {
+                error_tls_index = TlsAlloc();
+            } else {
+                /* Another thread is initializing — spin until ready */
+                while (error_tls_index == TLS_OUT_OF_INDEXES) { Sleep(0); }
+            }
         }
     }
-    return info;
-}
+
+    /* Get thread-local error info (creates if doesn't exist) */
+    static SevenZipErrorInfo* get_error_info(void) {
+        ensure_error_tls();
+        if (error_tls_index == TLS_OUT_OF_INDEXES) return NULL;
+
+        SevenZipErrorInfo* info = (SevenZipErrorInfo*)TlsGetValue(error_tls_index);
+        if (!info) {
+            info = (SevenZipErrorInfo*)calloc(1, sizeof(SevenZipErrorInfo));
+            if (info) {
+                info->code = SEVENZIP_OK;
+                info->position = -1;
+                TlsSetValue(error_tls_index, info);
+            }
+        }
+        return info;
+    }
+
+#else
+    #include <pthread.h>
+
+    /* Thread-local error context */
+    static pthread_key_t error_key;
+    static pthread_once_t error_key_once = PTHREAD_ONCE_INIT;
+
+    /* Initialize thread-local storage key */
+    static void make_error_key(void) {
+        pthread_key_create(&error_key, free);
+    }
+
+    /* Get thread-local error info (creates if doesn't exist) */
+    static SevenZipErrorInfo* get_error_info(void) {
+        pthread_once(&error_key_once, make_error_key);
+
+        SevenZipErrorInfo* info = (SevenZipErrorInfo*)pthread_getspecific(error_key);
+        if (!info) {
+            info = (SevenZipErrorInfo*)calloc(1, sizeof(SevenZipErrorInfo));
+            if (info) {
+                info->code = SEVENZIP_OK;
+                info->position = -1;
+                pthread_setspecific(error_key, info);
+            }
+        }
+        return info;
+    }
+#endif
 
 /**
  * Internal function to set detailed error information

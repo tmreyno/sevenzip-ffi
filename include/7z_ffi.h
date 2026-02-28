@@ -9,14 +9,16 @@ extern "C" {
 #include <stddef.h>
 
 /* Export macros for shared library */
-#if defined(_WIN32) || defined(_WIN64)
-    #ifdef DLL_EXPORT
-        #define SEVENZIP_API __declspec(dllexport)
+#if defined(SEVENZIP_STATIC) || (!defined(_WIN32) && !defined(_WIN64))
+    #if defined(_WIN32) || defined(_WIN64)
+        #define SEVENZIP_API
     #else
-        #define SEVENZIP_API __declspec(dllimport)
+        #define SEVENZIP_API __attribute__((visibility("default")))
     #endif
+#elif defined(DLL_EXPORT)
+    #define SEVENZIP_API __declspec(dllexport)
 #else
-    #define SEVENZIP_API __attribute__((visibility("default")))
+    #define SEVENZIP_API __declspec(dllimport)
 #endif
 
 /* Error codes */

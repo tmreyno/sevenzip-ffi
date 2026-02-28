@@ -33,6 +33,9 @@
     #define PATH_SEP '\\'
     #define S_ISREG(m) (((m) & _S_IFMT) == _S_IFREG)
     #define S_ISDIR(m) (((m) & _S_IFMT) == _S_IFDIR)
+    #ifndef S_IWUSR
+        #define S_IWUSR _S_IWRITE
+    #endif
     #define USE_MMAP 0
     #define CAPTURE_CTIME(st_ptr, ctime_var, has_ctime_var) do { (ctime_var) = 0; (has_ctime_var) = 0; } while(0)
 #else
