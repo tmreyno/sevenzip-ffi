@@ -216,56 +216,10 @@ static SevenZipErrorCode compress_single_file_lzma2(
     return SEVENZIP_OK;
 }
 
-SevenZipErrorCode sevenzip_compress(
-    const char* archive_path,
-    const char** input_paths,
-    SevenZipCompressionLevel level,
-    const char* password,
-    SevenZipProgressCallback progress_callback,
-    void* user_data
-) {
-    if (!archive_path || !input_paths) {
-        return SEVENZIP_ERROR_INVALID_PARAM;
-    }
-    
-    /* Count input files */
-    size_t num_inputs = 0;
-    while (input_paths[num_inputs] != NULL) {
-        num_inputs++;
-    }
-    
-    if (num_inputs == 0) {
-        return SEVENZIP_ERROR_INVALID_PARAM;
-    }
-    
-    /* For now, handle single file compression to LZMA2 format
-     * Full 7z archive creation requires more complex implementation
-     * TODO: Implement full 7z format with multiple files/directories
-     */
-    
-    if (num_inputs == 1 && is_regular_file(input_paths[0])) {
-        /* Single file - use LZMA2 format */
-        return compress_single_file_lzma2(
-            input_paths[0],
-            archive_path,
-            level,
-            progress_callback,
-            user_data
-        );
-    }
-    
-    /* Multiple files or directories not yet supported
-     * TODO: Implement using 7z format encoder:
-     * 1. Traverse directories recursively
-     * 2. Build file list with metadata
-     * 3. Create 7z archive header
-     * 4. Compress files with LZMA2
-     * 5. Write solid or non-solid blocks
-     * 6. Update archive header with offsets
-     */
-    
-    return SEVENZIP_ERROR_NOT_IMPLEMENTED;
-}
+/* NOTE: sevenzip_compress() is defined in ffi_interface.c
+ * It delegates to sevenzip_create_7z() for full 7z archive creation.
+ * The old partial implementation that was here has been removed to
+ * avoid duplicate symbol errors on Windows (lld-link). */
 
 /* ============================================================================
  * LZMA1 Compression - sevenzip_compress_lzma
