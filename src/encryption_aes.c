@@ -13,6 +13,16 @@
 #include <string.h>
 #include <stdlib.h>
 
+/* MSVC doesn't provide C11 aligned_alloc. Use _aligned_malloc/_aligned_free instead. */
+#ifdef _MSC_VER
+#include <malloc.h>
+#define portable_aligned_alloc(alignment, size) _aligned_malloc((size), (alignment))
+#define portable_aligned_free(ptr) _aligned_free(ptr)
+#else
+#define portable_aligned_alloc(alignment, size) aligned_alloc((alignment), (size))
+#define portable_aligned_free(ptr) free(ptr)
+#endif
+
 #define AES_KEY_SIZE 32  // 256 bits
 #ifndef SHA256_DIGEST_SIZE
 #define SHA256_DIGEST_SIZE 32
@@ -140,7 +150,7 @@ SevenZipErrorCode sevenzip_encrypt_data(
     }
     
     // Allocate aligned buffer for padded data
-    uint8_t* padded_data = (uint8_t*)aligned_alloc(16, padded_len);
+    uint8_t* padded_data = (uint8_t*)portable_aligned_alloc(16, padded_len);
     if (!padded_data) {
         return SEVENZIP_ERROR_MEMORY;
     }
@@ -152,9 +162,9 @@ SevenZipErrorCode sevenzip_encrypt_data(
     }
     
     // Allocate aligned buffer for AES context with IV
-    uint32_t* ivAes = (uint32_t*)aligned_alloc(16, AES_NUM_IVMRK_WORDS * sizeof(uint32_t));
+    uint32_t* ivAes = (uint32_t*)portable_aligned_alloc(16, AES_NUM_IVMRK_WORDS * sizeof(uint32_t));
     if (!ivAes) {
-        free(padded_data);
+        portable_aligned_free(padded_data);
         return SEVENZIP_ERROR_MEMORY;
     }
     
@@ -173,8 +183,8 @@ SevenZipErrorCode sevenzip_encrypt_data(
     
     *ciphertext_len = padded_len;
     
-    free(padded_data);
-    free(ivAes);
+    portable_aligned_free(padded_data);
+    portable_aligned_free(ivAes);
     
     return SEVENZIP_OK;
 }
@@ -205,7 +215,7 @@ SevenZipErrorCode sevenzip_decrypt_data(
     }
     
     // Allocate aligned buffer for AES context with IV
-    uint32_t* ivAes = (uint32_t*)aligned_alloc(16, AES_NUM_IVMRK_WORDS * sizeof(uint32_t));
+    uint32_t* ivAes = (uint32_t*)portable_aligned_alloc(16, AES_NUM_IVMRK_WORDS * sizeof(uint32_t));
     if (!ivAes) {
         return SEVENZIP_ERROR_MEMORY;
     }
@@ -229,7 +239,7 @@ SevenZipErrorCode sevenzip_decrypt_data(
         // Verify padding
         for (size_t i = ciphertext_len - padding_byte; i < ciphertext_len; i++) {
             if (plaintext[i] != padding_byte) {
-                free(ivAes);
+                portable_aligned_free(ivAes);
                 return SEVENZIP_ERROR_EXTRACT; // Invalid padding = wrong password
             }
         }
@@ -238,7 +248,7 @@ SevenZipErrorCode sevenzip_decrypt_data(
         *plaintext_len = ciphertext_len;
     }
     
-    free(ivAes);
+    portable_aligned_free(ivAes);
     
     return SEVENZIP_OK;
 }
