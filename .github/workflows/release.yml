@@ -1,0 +1,204 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # Build C library artifacts for all platforms
+  build-c:
+    name: Build C Library (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact_name: lib7z_ffi-linux
+            lib_pattern: "build/lib7z_ffi.a build/lib7z_ffi.so"
+          - os: macos-latest
+            artifact_name: lib7z_ffi-macos
+            lib_pattern: "build/lib7z_ffi.a build/lib7z_ffi.dylib"
+          - os: windows-latest
+            artifact_name: lib7z_ffi-windows
+            lib_pattern: "build/Release/7z_ffi.lib build/Release/7z_ffi.dll"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup LZMA SDK
+        run: |
+          chmod +x scripts/setup_lzma.sh
+          ./scripts/setup_lzma.sh
+        shell: bash
+
+      - name: Configure CMake
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build C Library
+        run: cmake --build build --config Release -j4
+
+      - name: Collect artifacts (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          mkdir -p release-artifacts
+          find build/ -name "*.a" -o -name "*.so" -o -name "*.dylib" | xargs -I{} cp {} release-artifacts/ 2>/dev/null || true
+          cp include/7z_ffi.h release-artifacts/
+        shell: bash
+
+      - name: Collect artifacts (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          New-Item -ItemType Directory -Force -Path release-artifacts
+          Get-ChildItem -Path build -Recurse -Include "*.lib","*.dll" | Copy-Item -Destination release-artifacts -ErrorAction SilentlyContinue
+          Copy-Item include/7z_ffi.h release-artifacts/
+        shell: pwsh
+
+      - name: Upload C library artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: release-artifacts/
+          if-no-files-found: warn
+
+  # Build and test Rust crate
+  build-rust:
+    name: Build Rust Crate (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup LZMA SDK
+        run: |
+          chmod +x scripts/setup_lzma.sh
+          ./scripts/setup_lzma.sh
+        shell: bash
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            rust/target/
+          key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Build C library
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --config Release -j4
+
+      - name: Build Rust crate
+        run: cargo build --release
+        working-directory: rust
+
+      - name: Run Rust tests
+        run: cargo test --release -- --nocapture
+        working-directory: rust
+        env:
+          RUST_BACKTRACE: 1
+
+  # Create GitHub Release with all artifacts
+  create-release:
+    name: Create GitHub Release
+    needs: [build-c, build-rust]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: all-artifacts/
+
+      - name: Package artifacts
+        run: |
+          cd all-artifacts
+          for dir in */; do
+            dir_name="${dir%/}"
+            zip -r "../${dir_name}.zip" "$dir_name/"
+          done
+          cd ..
+          ls -la *.zip
+
+      - name: Extract changelog entry
+        id: changelog
+        run: |
+          # Extract the section for this version from CHANGELOG.md
+          VERSION="${{ steps.get_version.outputs.VERSION }}"
+          if [ -f CHANGELOG.md ]; then
+            # Get section between this version header and the next
+            NOTES=$(awk "/^## \[${VERSION}\]/{flag=1; next} /^## \[/{flag=0} flag" CHANGELOG.md)
+            if [ -z "$NOTES" ]; then
+              NOTES="Release ${VERSION}. See CHANGELOG.md for details."
+            fi
+          else
+            NOTES="Release ${VERSION}."
+          fi
+          # Write to file to preserve newlines
+          echo "$NOTES" > release_notes.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: sevenzip-ffi ${{ steps.get_version.outputs.VERSION }}
+          body_path: release_notes.md
+          draft: false
+          prerelease: ${{ contains(steps.get_version.outputs.VERSION, '-') }}
+          files: |
+            *.zip
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  # Publish Rust crate to crates.io
+  # To enable: set repository variable PUBLISH_CRATE=true and add secret CRATES_IO_TOKEN
+  publish-crate:
+    name: Publish to crates.io
+    needs: [build-rust]
+    runs-on: ubuntu-latest
+    if: ${{ vars.PUBLISH_CRATE == 'true' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup LZMA SDK
+        run: |
+          chmod +x scripts/setup_lzma.sh
+          ./scripts/setup_lzma.sh
+        shell: bash
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build C library
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --config Release -j4
+
+      - name: Publish to crates.io
+        run: cargo publish --no-verify
+        working-directory: rust
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}

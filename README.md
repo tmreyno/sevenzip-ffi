@@ -1,5 +1,9 @@
 # sevenzip-ffi (C + Rust)
 
+[![CI](https://github.com/tmreyno/sevenzip-ffi/actions/workflows/ci.yml/badge.svg)](https://github.com/tmreyno/sevenzip-ffi/actions/workflows/ci.yml)
+[![Release](https://github.com/tmreyno/sevenzip-ffi/actions/workflows/release.yml/badge.svg)](https://github.com/tmreyno/sevenzip-ffi/actions/workflows/release.yml)
+[![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE)
+
 A SDK for 7z archive operations with both C and Rust interfaces, using the official LZMA SDK 23.01.
 
 ## ⚠️ Important: Large File Compression
@@ -18,7 +22,7 @@ opts.chunk_size = 64 * 1024 * 1024;  // 64MB chunks
 sz.create_archive_streaming("output.7z", &["/path/to/large/folder"], level, Some(&opts), None)?;
 ```
 
-📖 See [MEMORY_SAFETY.md](MEMORY_SAFETY.md) for detailed guidance.
+📖 See [docs/guides/MEMORY_SAFETY.md](docs/guides/MEMORY_SAFETY.md) for detailed guidance.
 
 ## Features
 
@@ -46,7 +50,7 @@ sz.create_archive_streaming("output.7z", &["/path/to/large/folder"], level, Some
 - **Large file support** - Large files with streaming
 - **AES-256 encryption** - Pure Rust implementation (no OpenSSL required)
 
-See [ADVANCED_FEATURES.md](ADVANCED_FEATURES.md) for detailed documentation.
+See [docs/guides/ADVANCED_FEATURES.md](docs/guides/ADVANCED_FEATURES.md) for detailed documentation.
 
 ## Quick Start
 
@@ -96,7 +100,7 @@ let ciphertext = ctx.encrypt(b"Secret data")?;
 let plaintext = ctx.decrypt(&ciphertext)?;
 ```
 
-See [README-rust.md](README-rust.md) for complete Rust documentation.
+See [docs/guides/RUST_README.md](docs/guides/RUST_README.md) for complete Rust documentation.
 
 ### Using the C API
 
@@ -147,13 +151,14 @@ See `include/7z_ffi.h` for the complete API documentation.
 
 ## Documentation
 
-- **[QUICKSTART.md](QUICKSTART.md)** - Getting started guide
-- **[ADVANCED_FEATURES.md](ADVANCED_FEATURES.md)** - Multi-threading, encryption, split archives
-- **[LARGE_FILES_GUIDE.md](LARGE_FILES_GUIDE.md)** - 100GB+ file compression
-- **[MEMORY_SAFETY.md](MEMORY_SAFETY.md)** - Memory-safe streaming API
-- **[README-rust.md](README-rust.md)** - Rust crate documentation
-- **[BUILD_AND_USAGE.md](BUILD_AND_USAGE.md)** - Build and usage instructions
-- **[CONTRIBUTING.md](CONTRIBUTING.md)** - How to contribute
+- **[docs/guides/QUICKSTART.md](docs/guides/QUICKSTART.md)** - Getting started guide
+- **[docs/guides/ADVANCED_FEATURES.md](docs/guides/ADVANCED_FEATURES.md)** - Multi-threading, encryption, split archives
+- **[docs/guides/LARGE_FILES_GUIDE.md](docs/guides/LARGE_FILES_GUIDE.md)** - 100GB+ file compression
+- **[docs/guides/MEMORY_SAFETY.md](docs/guides/MEMORY_SAFETY.md)** - Memory-safe streaming API
+- **[docs/guides/RUST_README.md](docs/guides/RUST_README.md)** - Rust crate documentation
+- **[docs/guides/BUILD_AND_USAGE.md](docs/guides/BUILD_AND_USAGE.md)** - Build and usage instructions
+- **[DOCUMENTATION.md](DOCUMENTATION.md)** - Full documentation index
+- **[CHANGELOG.md](CHANGELOG.md)** - Release history
 
 ## License
 

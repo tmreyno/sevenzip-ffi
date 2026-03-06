@@ -121,7 +121,7 @@ cargo run --example demo
 
 - **[../DOCUMENTATION.md](../DOCUMENTATION.md)** - Complete project documentation index
 - **[../README.md](../README.md)** - Main project README
-- **[../tauri/TAURI_INTEGRATION_GUIDE.md](../tauri/TAURI_INTEGRATION_GUIDE.md)** - Tauri integration
+- **[../CHANGELOG.md](../CHANGELOG.md)** - Release history
 
 ## 📝 Notes
 
@@ -135,4 +135,4 @@ For the complete documentation index, see [../DOCUMENTATION.md](../DOCUMENTATION
 
 ---
 
-**Last Updated:** January 31, 2026
+**Last Updated:** March 6, 2026

@@ -80,12 +80,12 @@ Located in `rust/docs/testing/`:
 ### Running Tests
 ```bash
 # C library tests
-cd /Users/terryreynolds/GitHub/sevenzip-ffi/build
-ctest
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release
+cd build && ctest
 
 # Rust tests
-cd /Users/terryreynolds/GitHub/sevenzip-ffi/rust
-cargo test
+cd rust && cargo test
 
 # Run all tests
 ./rust/scripts/run_all_tests.sh
@@ -225,5 +225,5 @@ See [README.md](README.md) for license information.
 
 ---
 
-**Last Updated:** January 31, 2026
+**Last Updated:** March 6, 2026
 **Version:** 1.2.0

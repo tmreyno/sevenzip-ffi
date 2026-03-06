@@ -2,11 +2,11 @@
 name = "seven-zip"
 version = "1.2.0"
 edition = "2021"
-authors = ["7z FFI SDK Contributors"]
+authors = ["Terry Reynolds"]
 license = "MIT OR Apache-2.0"
 description = "Complete Rust bindings for 7z archive operations with AES-256 encryption support"
-homepage = "https://github.com/yourusername/7z-ffi-sdk"
-repository = "https://github.com/yourusername/7z-ffi-sdk"
+homepage = "https://github.com/tmreyno/sevenzip-ffi"
+repository = "https://github.com/tmreyno/sevenzip-ffi"
 documentation = "https://docs.rs/seven-zip"
 keywords = ["7z", "compression", "lzma", "encryption", "archive"]
 categories = ["compression", "encoding", "filesystem"]

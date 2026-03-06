@@ -63,7 +63,7 @@ Complete guide to building and using the 7z FFI SDK Rust bindings.
 ### Step 1: Clone Repository
 
 ```bash
-git clone https://github.com/yourusername/sevenzip-ffi.git
+git clone https://github.com/tmreyno/sevenzip-ffi.git
 cd sevenzip-ffi
 ```
 
@@ -129,7 +129,7 @@ seven-zip = { path = "../rust" }
 
 ```toml
 [dependencies]
-seven-zip = { git = "https://github.com/yourusername/sevenzip-ffi", branch = "main" }
+seven-zip = { git = "https://github.com/tmreyno/sevenzip-ffi", branch = "main" }
 ```
 
 ### Method 3: Published Crate (Future)
@@ -625,7 +625,7 @@ jobs:
 
 ## Support
 
-- GitHub Issues: https://github.com/yourusername/sevenzip-ffi/issues
+- GitHub Issues: https://github.com/tmreyno/sevenzip-ffi/issues
 - Documentation: https://docs.rs/seven-zip
 - Examples: `/rust/examples/`
 
