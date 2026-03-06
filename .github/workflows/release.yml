@@ -1,0 +1,230 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g. 1.0.1)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  # Validate the tag/version before proceeding
+  validate:
+    name: Validate Release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get version
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Releasing version: ${VERSION}"
+
+      - name: Validate version matches package.json
+        run: |
+          PKG_VERSION=$(node -p "require('./napi/package.json').version")
+          TAG_VERSION="${{ steps.get_version.outputs.version }}"
+          echo "package.json version: ${PKG_VERSION}"
+          echo "Tag version:          ${TAG_VERSION}"
+          if [ "${PKG_VERSION}" != "${TAG_VERSION}" ]; then
+            echo "::warning::package.json version (${PKG_VERSION}) does not match tag version (${TAG_VERSION})"
+          fi
+
+  # Build C library on all platforms
+  build-c:
+    name: Build C Library (${{ matrix.os }})
+    needs: validate
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup LZMA SDK
+        run: |
+          chmod +x setup_lzma.sh
+          ./setup_lzma.sh
+        shell: bash
+
+      - name: Configure CMake
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release -j4
+
+      - name: Upload C library artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lib7z_ffi-${{ matrix.os }}
+          path: |
+            build/lib7z_ffi.*
+            build/*.a
+            build/*.so
+            build/*.dylib
+            build/Release/*.lib
+            build/Release/*.dll
+          if-no-files-found: warn
+
+  # Build Rust crate on all platforms
+  build-rust:
+    name: Build Rust (${{ matrix.os }})
+    needs: validate
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup LZMA SDK
+        run: |
+          chmod +x setup_lzma.sh
+          ./setup_lzma.sh
+        shell: bash
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-action@stable
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Build C library
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --config Release -j4
+
+      - name: Build Rust crate
+        run: cargo build --release
+        working-directory: rust
+
+      - name: Run Rust tests
+        run: cargo test --release -- --nocapture
+        working-directory: rust
+        env:
+          RUST_BACKTRACE: 1
+
+  # Create GitHub Release with assets
+  create-release:
+    name: Create GitHub Release
+    needs: [validate, build-c, build-rust]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List artifacts
+        run: find artifacts -type f | sort
+
+      - name: Package release assets
+        run: |
+          VERSION="${{ needs.validate.outputs.version }}"
+          mkdir -p dist
+
+          # Package each platform's C library
+          for platform in ubuntu-latest macos-latest windows-latest; do
+            if [ -d "artifacts/lib7z_ffi-${platform}" ]; then
+              tar -czf "dist/lib7z_ffi-${platform}-v${VERSION}.tar.gz" \
+                -C "artifacts/lib7z_ffi-${platform}" .
+            fi
+          done
+
+          ls -la dist/
+
+      - name: Extract changelog for this version
+        id: changelog
+        run: |
+          VERSION="${{ needs.validate.outputs.version }}"
+          if [ -f CHANGELOG.md ]; then
+            # Extract section for this version between ## [version] markers
+            NOTES=$(awk "/^## \[${VERSION}\]/{found=1; next} found && /^## \[/{exit} found{print}" CHANGELOG.md)
+            if [ -z "$NOTES" ]; then
+              NOTES="Release v${VERSION}"
+            fi
+          else
+            NOTES="Release v${VERSION}"
+          fi
+          # Write to file to preserve newlines
+          echo "$NOTES" > /tmp/release_notes.txt
+          echo "notes_file=/tmp/release_notes.txt" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.validate.outputs.version }}
+          name: Release v${{ needs.validate.outputs.version }}
+          body_path: ${{ steps.changelog.outputs.notes_file }}
+          files: dist/*
+          draft: false
+          prerelease: ${{ contains(needs.validate.outputs.version, '-') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Publish npm package
+  publish-npm:
+    name: Publish to npm
+    needs: [validate, create-release]
+    runs-on: ubuntu-latest
+    # Only publish on tag push (not workflow_dispatch without NPM_TOKEN)
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && vars.NPM_PUBLISH_ENABLED == 'true')
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: napi
+
+      - name: Publish to npm (dry run)
+        run: npm publish --dry-run --access public
+        working-directory: napi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        continue-on-error: true
+
+      - name: Publish to npm
+        run: npm publish --access public
+        working-directory: napi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        if: secrets.NPM_TOKEN != ''

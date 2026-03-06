@@ -1,5 +1,10 @@
 # sevenzip-ffi (C + Rust)
 
+[![CI](https://github.com/tmreyno/sevenzip-ffi/actions/workflows/ci.yml/badge.svg)](https://github.com/tmreyno/sevenzip-ffi/actions/workflows/ci.yml)
+[![Release](https://github.com/tmreyno/sevenzip-ffi/actions/workflows/release.yml/badge.svg)](https://github.com/tmreyno/sevenzip-ffi/actions/workflows/release.yml)
+[![npm version](https://img.shields.io/npm/v/@sevenzip/napi.svg)](https://www.npmjs.com/package/@sevenzip/napi)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 A SDK for 7z archive operations with both C and Rust interfaces, using the official LZMA SDK 23.01.
 
 ## ⚠️ Important: Large File Compression
@@ -144,6 +149,23 @@ See `include/7z_ffi.h` for the complete API documentation.
 - `sevenzip_create_7z_streaming()` - **NEW!** Streaming compression for large files
 - `sevenzip_extract_streaming()` - **NEW!** Extract split/multi-volume archives
 - `sevenzip_free()` - Free allocated memory
+
+## Releases
+
+Releases are published automatically when a version tag is pushed:
+
+```bash
+# Bump the version in napi/package.json and Cargo.toml, then:
+git tag v1.0.1
+git push origin v1.0.1
+```
+
+The [release workflow](.github/workflows/release.yml) will:
+1. Build and test the C library and Rust crate on Linux, macOS, and Windows
+2. Create a GitHub Release with compiled artifacts attached
+3. Publish the `@sevenzip/napi` package to npm (requires `NPM_TOKEN` secret)
+
+See [CHANGELOG.md](CHANGELOG.md) for a full history of changes.
 
 ## Documentation
 
