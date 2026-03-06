@@ -2,10 +2,10 @@
 name = "seven-zip"
 version = "1.0.0"
 edition = "2021"
-authors = ["Your Name <your.email@example.com>"]
+authors = ["Terry Reynolds"]
 license = "MIT OR Apache-2.0"
 description = "Rust bindings for 7z archive operations (extract, list, compress) using LZMA2"
-repository = "https://github.com/yourusername/7z-ffi-sdk"
+repository = "https://github.com/tmreyno/sevenzip-ffi"
 documentation = "https://docs.rs/seven-zip"
 keywords = ["7z", "lzma2", "compression", "archive", "extraction"]
 categories = ["compression", "filesystem"]

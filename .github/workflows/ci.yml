@@ -24,8 +24,8 @@ jobs:
 
       - name: Setup LZMA SDK
         run: |
-          chmod +x setup_lzma.sh
-          ./setup_lzma.sh
+          chmod +x scripts/setup_lzma.sh
+          ./scripts/setup_lzma.sh
         shell: bash
 
       - name: Configure CMake
@@ -71,12 +71,12 @@ jobs:
 
       - name: Setup LZMA SDK
         run: |
-          chmod +x setup_lzma.sh
-          ./setup_lzma.sh
+          chmod +x scripts/setup_lzma.sh
+          ./scripts/setup_lzma.sh
         shell: bash
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-action@stable
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Cache Cargo
         uses: actions/cache@v4
