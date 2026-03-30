@@ -2,7 +2,7 @@
 name = "sevenzip-napi"
 version = "1.0.0"
 edition = "2021"
-authors = ["Terry Reynolds <tmreyno@github.com>"]
+authors = ["CORE Project Contributors"]
 license = "MIT"
 description = "Node.js bindings for 7z compression via NAPI-RS"
 repository = "https://github.com/tmreyno/sevenzip-ffi"
