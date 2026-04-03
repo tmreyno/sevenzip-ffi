@@ -114,15 +114,15 @@ pub fn get_version() -> String {
 /// # Arguments
 ///
 /// * `archive_path` - Base path for the archive (e.g., "backup.7z")
-///                    Creates: backup.7z.001, backup.7z.002, etc.
+///   Creates: backup.7z.001, backup.7z.002, etc.
 /// * `input_paths` - Files and directories to compress
 /// * `level` - Compression level
 /// * `volume_size` - Size of each volume in bytes
-///                   Common sizes:
-///                   - 1_474_560 (1.44MB floppy)
-///                   - 734_003_200 (700MB CD)
-///                   - 4_700_372_992 (4.7GB DVD)
-///                   - 4_294_967_296 (4GB FAT32 limit)
+///   Common sizes:
+///   - 1_474_560 (1.44MB floppy)
+///   - 734_003_200 (700MB CD)
+///   - 4_700_372_992 (4.7GB DVD)
+///   - 4_294_967_296 (4GB FAT32 limit)
 ///
 /// # Example
 ///
@@ -171,9 +171,7 @@ pub fn create_split_archive(
     c_path_ptrs.push(std::ptr::null());
     
     // Setup compression options
-    let c_password = password
-        .map(|p| CString::new(p))
-        .transpose()?;
+    let c_password = password.map(CString::new).transpose()?;
     
     let c_options = ffi::SevenZipCompressOptions {
         num_threads: 0, // auto
@@ -234,9 +232,7 @@ pub fn extract_split_archive(
     
     let c_archive = CString::new(archive_path)?;
     let c_output = CString::new(output_dir)?;
-    let c_password = password
-        .map(|p| CString::new(p))
-        .transpose()?;
+    let c_password = password.map(CString::new).transpose()?;
     
     unsafe {
         let result = ffi::sevenzip_extract_split_archive(
