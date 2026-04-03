@@ -34,8 +34,13 @@ jobs:
           ./scripts/setup_lzma.sh
         shell: bash
 
-      - name: Configure CMake
+      - name: Configure CMake (Unix)
+        if: runner.os != 'Windows'
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Configure CMake (Windows)
+        if: runner.os == 'Windows'
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_EXAMPLES=OFF -DBUILD_TESTS=OFF
 
       - name: Build
         run: cmake --build build --config Release -j4
@@ -102,9 +107,16 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
 
+      - name: Configure C library build (Unix)
+        if: runner.os != 'Windows'
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Configure C library build (Windows)
+        if: runner.os == 'Windows'
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_EXAMPLES=OFF -DBUILD_TESTS=OFF
+
       - name: Build C library first
         run: |
-          cmake -B build -DCMAKE_BUILD_TYPE=Release
           cmake --build build --config Release -j4
 
       - name: Build Rust crate

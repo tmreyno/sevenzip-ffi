@@ -106,6 +106,8 @@ This library is consumed by **CORE-FFX** (CORE-1 repo) for forensic 7z archive c
 - `scripts/setup_lzma.sh` must no-op when the vendored `lzma/C` tree is already present; CI should not depend on reaching `7-zip.org`
 - Rust toolchain setup in workflows must use `dtolnay/rust-toolchain@stable`
 - Linux workflow jobs that compile `forensic_manifest.c` must install `libacl1-dev` so `sys/acl.h` is available
+- `CMakeLists.txt` must link `acl` on Linux because `forensic_manifest.c` uses POSIX ACL APIs
+- Windows CI and release builds should configure CMake with `BUILD_EXAMPLES=OFF` and `BUILD_TESTS=OFF`; the library build is required, but the bundled C examples/tests are not Windows-portable today
 
 ## Do NOT
 
@@ -120,3 +122,5 @@ This library is consumed by **CORE-FFX** (CORE-1 repo) for forensic 7z archive c
 - Force CI to download the SDK when `lzma/C` is already vendored — the setup script must short-circuit offline
 - Use `dtolnay/rust-action` in workflows — the valid action is `dtolnay/rust-toolchain@stable`
 - Omit `libacl1-dev` from Linux workflow jobs — `forensic_manifest.c` includes `sys/acl.h`
+- Remove Linux `acl` linkage from `CMakeLists.txt` while `forensic_manifest.c` still calls POSIX ACL APIs
+- Require Windows CI to build the bundled examples/tests until they are made Windows-portable

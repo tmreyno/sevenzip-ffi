@@ -119,6 +119,10 @@ elseif(UNIX)
     # Enable multi-threading and optimizations for Unix/macOS
     target_compile_definitions(7z_ffi PRIVATE _FILE_OFFSET_BITS=64 _LARGEFILE_SOURCE)
     target_link_libraries(7z_ffi PRIVATE pthread)
+
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        target_link_libraries(7z_ffi PRIVATE acl)
+    endif()
     
     # Enable ARM optimizations on Apple Silicon / ARM64
     # NOTE: MY_CPU_ARM64 is auto-detected by CpuArch.h in SDK 24.09+ from __aarch64__
