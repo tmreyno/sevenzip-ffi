@@ -10,6 +10,11 @@ on:
         description: 'Version to release (e.g. 1.0.1)'
         required: true
         type: string
+      publish_npm:
+        description: 'Publish the napi package to npm'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -104,7 +109,7 @@ jobs:
         shell: bash
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-action@stable
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Cache Cargo
         uses: actions/cache@v4
@@ -194,13 +199,85 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Sync changelog on default branch
+        shell: bash
+        env:
+          TAG: v${{ needs.validate.outputs.version }}
+          REPO: ${{ github.repository }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          if [ ! -f CHANGELOG.md ]; then
+            echo "No CHANGELOG.md found"
+            exit 0
+          fi
+
+          VERSION="${TAG#v}"
+          git fetch origin "$DEFAULT_BRANCH" --tags
+          git checkout -B release-changelog-sync "origin/$DEFAULT_BRANCH"
+          PREV_TAG=$(git tag --list 'v*' --sort=-version:refname | awk -v tag="$TAG" '$0 != tag { print; exit }')
+          export VERSION PREV_TAG
+
+          python3 - <<'PY'
+            from pathlib import Path
+            import os
+            import re
+
+            path = Path("CHANGELOG.md")
+            lines = path.read_text(encoding="utf-8").splitlines()
+            repo = os.environ["REPO"]
+            tag = os.environ["TAG"]
+            version = os.environ["VERSION"]
+            prev_tag = os.environ.get("PREV_TAG", "").strip()
+
+            if not any(line.strip() == "## [Unreleased]" for line in lines):
+              insert_at = next((i for i, line in enumerate(lines) if re.match(r"^## \[\d+\.\d+\.\d+\]", line)), len(lines))
+              lines[insert_at:insert_at] = ["## [Unreleased]", ""]
+
+            unreleased_ref = f"[Unreleased]: https://github.com/{repo}/compare/{tag}...HEAD"
+            unreleased_idx = next((i for i, line in enumerate(lines) if line.startswith("[Unreleased]: ")), None)
+            if unreleased_idx is None:
+              if lines and lines[-1] != "":
+                lines.append("")
+              lines.append(unreleased_ref)
+              unreleased_idx = len(lines) - 1
+            else:
+              lines[unreleased_idx] = unreleased_ref
+
+            version_ref = (
+              f"[{version}]: https://github.com/{repo}/compare/{prev_tag}...{tag}"
+              if prev_tag
+              else f"[{version}]: https://github.com/{repo}/releases/tag/{tag}"
+            )
+            version_prefix = f"[{version}]: "
+            version_idx = next((i for i, line in enumerate(lines) if line.startswith(version_prefix)), None)
+            if version_idx is None:
+              lines.insert(unreleased_idx + 1, version_ref)
+            else:
+              lines[version_idx] = version_ref
+
+            path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+            PY
+
+          if git diff --quiet -- CHANGELOG.md; then
+            echo "CHANGELOG.md already up to date"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md
+          git commit -m "docs: sync changelog for ${TAG} [skip ci]"
+          git push origin release-changelog-sync:"$DEFAULT_BRANCH"
+
   # Publish npm package
   publish-npm:
     name: Publish to npm
     needs: [validate, create-release]
     runs-on: ubuntu-latest
-    # Only publish on tag push (not workflow_dispatch without NPM_TOKEN)
-    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && vars.NPM_PUBLISH_ENABLED == 'true')
+    # Publish on tag pushes, or explicitly when requested for workflow_dispatch.
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && github.event.inputs.publish_npm == 'true')
+    env:
+      HAS_NPM_TOKEN: ${{ secrets.NPM_TOKEN != '' }}
 
     steps:
       - uses: actions/checkout@v4
@@ -218,8 +295,6 @@ jobs:
       - name: Publish to npm (dry run)
         run: npm publish --dry-run --access public
         working-directory: napi
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         continue-on-error: true
 
       - name: Publish to npm
@@ -227,4 +302,4 @@ jobs:
         working-directory: napi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        if: secrets.NPM_TOKEN != ''
+        if: env.HAS_NPM_TOKEN == 'true'
