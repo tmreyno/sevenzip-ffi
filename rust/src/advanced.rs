@@ -110,6 +110,7 @@ pub fn get_version() -> String {
 ///
 /// This creates an archive split into multiple files of the specified size,
 /// useful for transfer limits, DVD/Blu-ray burning, or cloud storage limits.
+/// Internally this uses the streaming C API with `split_size` enabled.
 ///
 /// # Arguments
 ///
@@ -170,22 +171,21 @@ pub fn create_split_archive(
         .collect();
     c_path_ptrs.push(std::ptr::null());
     
-    // Setup compression options
+    // Split archives are created through the public streaming API by setting
+    // a non-zero split size on the stream options.
     let c_password = password.map(CString::new).transpose()?;
-    
-    let c_options = ffi::SevenZipCompressOptions {
-        num_threads: 0, // auto
-        dict_size: 0,   // auto
-        solid: 1,       // solid archive
-        password: c_password.as_ref().map_or(std::ptr::null(), |p| p.as_ptr()),
-    };
-    
+
     unsafe {
-        let result = ffi::sevenzip_create_multivolume_7z(
+        let mut c_options = std::mem::MaybeUninit::<ffi::SevenZipStreamOptions>::uninit();
+        ffi::sevenzip_stream_options_init(c_options.as_mut_ptr());
+        let mut c_options = c_options.assume_init();
+        c_options.split_size = volume_size;
+        c_options.password = c_password.as_ref().map_or(std::ptr::null(), |p| p.as_ptr());
+
+        let result = ffi::sevenzip_create_7z_streaming(
             c_archive.as_ptr(),
             c_path_ptrs.as_ptr(),
             level.into(),
-            volume_size,
             &c_options,
             None,
             std::ptr::null_mut(),

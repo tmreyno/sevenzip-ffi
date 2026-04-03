@@ -25,7 +25,7 @@ fn main() {
         
         // Run cmake configuration
         let cmake_status = Command::new("cmake")
-            .args(&[
+            .args([
                 "-B",
                 "build",
                 "-DCMAKE_BUILD_TYPE=Release",
@@ -57,7 +57,7 @@ fn main() {
         // Run cmake build
         if build_dir.exists() {
             let build_status = Command::new("cmake")
-                .args(&["--build", "build", "--config", "Release"])
+                .args(["--build", "build", "--config", "Release"])
                 .current_dir(project_root)
                 .status();
             

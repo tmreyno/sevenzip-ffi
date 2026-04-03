@@ -382,20 +382,12 @@ extern "C" {
     ) -> SevenZipErrorCode;
 
     // ============================================================================
-    // Multi-Volume (Split) Archives (Missing Functions)
+    // Split Archives
     // ============================================================================
-    
-    /// Create a multi-volume 7z archive (splits into multiple files)
-    pub fn sevenzip_create_multivolume_7z(
-        archive_path: *const c_char,
-        input_paths: *const *const c_char,
-        level: SevenZipCompressionLevel,
-        volume_size: u64,
-        options: *const SevenZipCompressOptions,
-        progress_callback: SevenZipProgressCallback,
-        user_data: *mut c_void,
-    ) -> SevenZipErrorCode;
-    
+    // Split archive creation uses sevenzip_create_7z_streaming() with a non-zero
+    // SevenZipStreamOptions.split_size. There is no exported C symbol named
+    // sevenzip_create_multivolume_7z in the public header.
+
     /// Extract a split/multi-volume archive
     pub fn sevenzip_extract_split_archive(
         archive_path: *const c_char,

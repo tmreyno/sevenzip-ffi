@@ -83,6 +83,10 @@ Use `portable_aligned_alloc()` / `portable_aligned_free()` macros instead of C11
 
 This repo's default CMake output must remain a static library. CI, release artifacts, Rust bindings, and CORE consumers all expect `build/lib7z_ffi.a` on Unix-like platforms and `build/Release/7z_ffi.lib` on Windows. Shared-library builds are opt-in via `-DBUILD_SHARED_LIBS=ON`.
 
+### 9. Rust Split-Archive FFI Uses The Streaming Entry Point
+
+The public C API does **not** export a symbol named `sevenzip_create_multivolume_7z`. Rust split-archive helpers must call `sevenzip_create_7z_streaming()` with `SevenZipStreamOptions.split_size > 0`, which internally delegates to the complete multi-volume implementation in `archive_create_multivolume.c`.
+
 ## Build & Test
 
 ```bash
@@ -133,4 +137,5 @@ This library is consumed by **CORE-FFX** (CORE-1 repo) for forensic 7z archive c
 - Change `BUILD_SHARED_LIBS` back to `ON` by default — the Rust bindings and shipped artifacts are static-first
 - Let Unix CI configure CMake without `-DBUILD_SHARED_LIBS=OFF` — fresh checkouts will only produce shared objects and the Rust bindings will fail to link
 - Remove Linux `acl` linking from either Rust `build.rs` while static linking remains the default
+- Bind or call a Rust FFI symbol named `sevenzip_create_multivolume_7z` unless the public C header exports it too — split archives currently go through `sevenzip_create_7z_streaming()` with `split_size` enabled
 - Require Windows CI to build the bundled examples/tests until they are made Windows-portable
