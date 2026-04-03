@@ -102,6 +102,8 @@ This library is consumed by **CORE-FFX** (CORE-1 repo) for forensic 7z archive c
 
 - `.github/workflows/ci.yml` — Build + test on Linux, macOS, Windows
 - `.github/workflows/release.yml` — Tag push (`v*`) triggers release build + npm publish
+- Workflow LZMA bootstrap must call `scripts/setup_lzma.sh` from the repo root; do not point CI at a nonexistent top-level `setup_lzma.sh`
+- Rust toolchain setup in workflows must use `dtolnay/rust-toolchain@stable`
 
 ## Do NOT
 
@@ -112,3 +114,5 @@ This library is consumed by **CORE-FFX** (CORE-1 repo) for forensic 7z archive c
 - Change the entropy threshold (220) in one file without updating the other
 - Use C11 `aligned_alloc()` in C code — use `portable_aligned_alloc()` macro
 - Downgrade the LZMA SDK from 24.09 to an older version
+- Point GitHub Actions at a top-level `setup_lzma.sh` — the bootstrap script lives under `scripts/`
+- Use `dtolnay/rust-action` in workflows — the valid action is `dtolnay/rust-toolchain@stable`
