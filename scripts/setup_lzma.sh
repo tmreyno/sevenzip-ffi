@@ -14,6 +14,11 @@ echo "LZMA SDK Setup Script"
 echo "================================"
 echo ""
 
+if [ -d "lzma/C" ] && [ -f "lzma/C/7z.h" ]; then
+    echo "Vendored LZMA SDK already present in lzma/C; skipping download."
+    exit 0
+fi
+
 # Check if 7z is installed
 if ! command -v 7z &> /dev/null; then
     echo "Error: 7z command not found!"

@@ -103,7 +103,9 @@ This library is consumed by **CORE-FFX** (CORE-1 repo) for forensic 7z archive c
 - `.github/workflows/ci.yml` — Build + test on Linux, macOS, Windows
 - `.github/workflows/release.yml` — Tag push (`v*`) triggers release build + npm publish
 - Workflow LZMA bootstrap must call `scripts/setup_lzma.sh` from the repo root; do not point CI at a nonexistent top-level `setup_lzma.sh`
+- `scripts/setup_lzma.sh` must no-op when the vendored `lzma/C` tree is already present; CI should not depend on reaching `7-zip.org`
 - Rust toolchain setup in workflows must use `dtolnay/rust-toolchain@stable`
+- Linux workflow jobs that compile `forensic_manifest.c` must install `libacl1-dev` so `sys/acl.h` is available
 
 ## Do NOT
 
@@ -115,4 +117,6 @@ This library is consumed by **CORE-FFX** (CORE-1 repo) for forensic 7z archive c
 - Use C11 `aligned_alloc()` in C code — use `portable_aligned_alloc()` macro
 - Downgrade the LZMA SDK from 24.09 to an older version
 - Point GitHub Actions at a top-level `setup_lzma.sh` — the bootstrap script lives under `scripts/`
+- Force CI to download the SDK when `lzma/C` is already vendored — the setup script must short-circuit offline
 - Use `dtolnay/rust-action` in workflows — the valid action is `dtolnay/rust-toolchain@stable`
+- Omit `libacl1-dev` from Linux workflow jobs — `forensic_manifest.c` includes `sys/acl.h`
