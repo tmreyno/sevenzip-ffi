@@ -36,7 +36,7 @@ jobs:
 
       - name: Configure CMake (Unix)
         if: runner.os != 'Windows'
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF
 
       - name: Configure CMake (Windows)
         if: runner.os == 'Windows'
@@ -109,7 +109,7 @@ jobs:
 
       - name: Configure C library build (Unix)
         if: runner.os != 'Windows'
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF
 
       - name: Configure C library build (Windows)
         if: runner.os == 'Windows'

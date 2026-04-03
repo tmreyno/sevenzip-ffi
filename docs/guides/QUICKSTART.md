@@ -12,22 +12,24 @@ The library has been successfully built and tested on macOS with Apple Silicon (
 
 ```bash
 cd /path/to/sevenzip-ffi
-./setup_lzma.sh
+./scripts/setup_lzma.sh
 ```
 
 ### 2. Build
 
 ```bash
-mkdir build && cd build
-cmake ..
-cmake --build . --config Release
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF
+cmake --build build --config Release
 ```
 
 ### 3. Verify
 
 The build should produce:
-- `lib7z_ffi.dylib` (or `.so` on Linux, `.dll` on Windows)
+- macOS/Linux: `build/lib7z_ffi.a`
+- Windows: `build/Release/7z_ffi.lib`
 - Example programs: `example_list`, `example_extract`, `example_compress`
+
+Shared-library builds remain available when explicitly requested with `-DBUILD_SHARED_LIBS=ON`.
 
 ## Usage Examples
 
@@ -163,7 +165,7 @@ See `tauri/tauri-integration.md` for complete Tauri integration guide including:
 
 ## Next Steps
 
-1. **Use the library in your project** - Copy `lib7z_ffi.dylib` to your project
+1. **Use the library in your project** - Copy `build/lib7z_ffi.a` or the matching prebuilt archive into your project
 2. **Integrate with Tauri** - Follow the Tauri integration guide
 3. **Implement compression** - The structure is ready in `src/7z_compress.c`
 4. **Add tests** - Create unit tests for your use cases
@@ -173,10 +175,10 @@ See `tauri/tauri-integration.md` for complete Tauri integration guide including:
 ### Build Issues
 
 **Problem**: Missing LZMA SDK files  
-**Solution**: Run `./setup_lzma.sh` to download the LZMA SDK
+**Solution**: Run `./scripts/setup_lzma.sh` to populate the vendored SDK tree
 
 **Problem**: Linker errors  
-**Solution**: Make sure all source files are included in CMakeLists.txt
+**Solution**: Build the static library with `-DBUILD_SHARED_LIBS=OFF`; Linux Rust builds also require `libacl1-dev`
 
 ### Runtime Issues
 

@@ -79,6 +79,10 @@ For files >1GB, use `create_archive_streaming()` instead of `create_archive()`. 
 
 Use `portable_aligned_alloc()` / `portable_aligned_free()` macros instead of C11 `aligned_alloc()` — MSVC does not provide `aligned_alloc`. The macros map to `_aligned_malloc()` / `_aligned_free()` on Windows.
 
+### 8. Static Libraries Are Canonical
+
+This repo's default CMake output must remain a static library. CI, release artifacts, Rust bindings, and CORE consumers all expect `build/lib7z_ffi.a` on Unix-like platforms and `build/Release/7z_ffi.lib` on Windows. Shared-library builds are opt-in via `-DBUILD_SHARED_LIBS=ON`.
+
 ## Build & Test
 
 ```bash
@@ -107,6 +111,9 @@ This library is consumed by **CORE-FFX** (CORE-1 repo) for forensic 7z archive c
 - Rust toolchain setup in workflows must use `dtolnay/rust-toolchain@stable`
 - Linux workflow jobs that compile `forensic_manifest.c` must install `libacl1-dev` so `sys/acl.h` is available
 - `CMakeLists.txt` must link `acl` on Linux because `forensic_manifest.c` uses POSIX ACL APIs
+- Unix workflow configure steps must pass `-DBUILD_SHARED_LIBS=OFF` so fresh CI checkouts produce the static library expected by the Rust bindings
+- `rust/build.rs` must request `-DBUILD_SHARED_LIBS=OFF` when it bootstraps the C library itself
+- Both Rust `build.rs` files must link `acl` on Linux when statically linking `7z_ffi`
 - Windows CI and release builds should configure CMake with `BUILD_EXAMPLES=OFF` and `BUILD_TESTS=OFF`; the library build is required, but the bundled C examples/tests are not Windows-portable today
 
 ## Do NOT
@@ -123,4 +130,7 @@ This library is consumed by **CORE-FFX** (CORE-1 repo) for forensic 7z archive c
 - Use `dtolnay/rust-action` in workflows — the valid action is `dtolnay/rust-toolchain@stable`
 - Omit `libacl1-dev` from Linux workflow jobs — `forensic_manifest.c` includes `sys/acl.h`
 - Remove Linux `acl` linkage from `CMakeLists.txt` while `forensic_manifest.c` still calls POSIX ACL APIs
+- Change `BUILD_SHARED_LIBS` back to `ON` by default — the Rust bindings and shipped artifacts are static-first
+- Let Unix CI configure CMake without `-DBUILD_SHARED_LIBS=OFF` — fresh checkouts will only produce shared objects and the Rust bindings will fail to link
+- Remove Linux `acl` linking from either Rust `build.rs` while static linking remains the default
 - Require Windows CI to build the bundled examples/tests until they are made Windows-portable

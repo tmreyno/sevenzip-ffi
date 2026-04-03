@@ -6,7 +6,8 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # Options
-option(BUILD_SHARED_LIBS "Build shared libraries" ON)
+# Static libraries are the canonical output for CI, release artifacts, and CORE consumers.
+option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 option(BUILD_EXAMPLES "Build example applications" ON)
 
 # Include directories

@@ -25,7 +25,12 @@ fn main() {
         
         // Run cmake configuration
         let cmake_status = Command::new("cmake")
-            .args(&["-B", "build", "-DCMAKE_BUILD_TYPE=Release"])
+            .args(&[
+                "-B",
+                "build",
+                "-DCMAKE_BUILD_TYPE=Release",
+                "-DBUILD_SHARED_LIBS=OFF",
+            ])
             .current_dir(project_root)
             .status();
         
@@ -36,12 +41,16 @@ fn main() {
             Ok(status) => {
                 println!("cargo:warning=CMake configuration failed with status: {}", status);
                 println!("cargo:warning=Please build the C library manually:");
-                println!("cargo:warning=  cd .. && cmake -B build && cmake --build build");
+                println!(
+                    "cargo:warning=  cd .. && cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF && cmake --build build"
+                );
             }
             Err(e) => {
                 println!("cargo:warning=CMake not found: {}", e);
                 println!("cargo:warning=Please install CMake and build the C library manually:");
-                println!("cargo:warning=  cd .. && cmake -B build && cmake --build build");
+                println!(
+                    "cargo:warning=  cd .. && cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF && cmake --build build"
+                );
             }
         }
         
@@ -82,12 +91,15 @@ fn main() {
         // Link system libraries (no OpenSSL needed - using pure Rust crypto)
         #[cfg(not(target_os = "windows"))]
         {
-            // Link pthread for thread-safe error reporting
             #[cfg(target_os = "macos")]
             println!("cargo:rustc-link-lib=dylib=pthread");
             
             #[cfg(target_os = "linux")]
-            println!("cargo:rustc-link-lib=dylib=pthread");
+            {
+                println!("cargo:rustc-link-lib=dylib=stdc++");
+                println!("cargo:rustc-link-lib=dylib=pthread");
+                println!("cargo:rustc-link-lib=dylib=acl");
+            }
         }
         
         // On Windows, link against bcrypt for system crypto (if C library needs it)
@@ -98,7 +110,9 @@ fn main() {
     } else {
         println!("cargo:warning=Library directory not found: {}", lib_dir.display());
         println!("cargo:warning=Please build the C library manually:");
-        println!("cargo:warning=  cd .. && cmake -B build && cmake --build build");
+        println!(
+            "cargo:warning=  cd .. && cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF && cmake --build build"
+        );
         
         // Still try to link, might be in a custom location
         println!("cargo:rustc-link-lib=static=7z_ffi");

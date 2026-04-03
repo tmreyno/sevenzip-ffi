@@ -106,7 +106,7 @@ Located in `tauri/`:
 Utility scripts located in `scripts/`:
 - **demo.sh** - C library demonstration
 - **demo_rust_crate.sh** - Rust library demonstration
-- **setup_lzma.sh** - LZMA SDK setup
+- **scripts/setup_lzma.sh** - LZMA SDK setup
 - **forensic_archiver_encrypted.sh** - Forensic archiving example
 - **test_encryption_e2e.sh** - End-to-end encryption testing
 

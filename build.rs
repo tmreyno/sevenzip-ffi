@@ -42,6 +42,7 @@ fn main() {
         {
             println!("cargo:rustc-link-lib=dylib=stdc++");
             println!("cargo:rustc-link-lib=dylib=pthread");
+            println!("cargo:rustc-link-lib=dylib=acl");
         }
         
         #[cfg(target_os = "windows")]

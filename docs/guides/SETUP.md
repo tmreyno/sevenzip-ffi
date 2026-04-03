@@ -61,7 +61,7 @@ rm -rf lzma_temp "$LZMA_FILE"
 echo "LZMA SDK setup complete!"
 ```
 
-Save this as `setup_lzma.sh`, make it executable with `chmod +x setup_lzma.sh`, and run it.
+Save this as `scripts/setup_lzma.sh`, make it executable with `chmod +x scripts/setup_lzma.sh`, and run it.
 
 ## Build
 
@@ -70,7 +70,7 @@ Once you have the LZMA SDK in place:
 ```bash
 mkdir build
 cd build
-cmake ..
+cmake -DBUILD_SHARED_LIBS=OFF ..
 cmake --build .
 ```
 
@@ -78,9 +78,10 @@ cmake --build .
 
 Check that the library was built successfully:
 
-- Linux: `build/lib7z_ffi.so`
-- macOS: `build/lib7z_ffi.dylib`
-- Windows: `build/Release/7z_ffi.dll`
+- Linux/macOS: `build/lib7z_ffi.a`
+- Windows: `build/Release/7z_ffi.lib`
+
+If you specifically need a shared library, configure CMake with `-DBUILD_SHARED_LIBS=ON`.
 
 ## Test
 
