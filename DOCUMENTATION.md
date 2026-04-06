@@ -80,11 +80,11 @@ Located in `rust/docs/testing/`:
 ### Running Tests
 ```bash
 # C library tests
-cd /Users/terryreynolds/GitHub/sevenzip-ffi/build
+cd build
 ctest
 
 # Rust tests
-cd /Users/terryreynolds/GitHub/sevenzip-ffi/rust
+cd rust
 cargo test
 
 # Run all tests

@@ -20,7 +20,7 @@
     "react",
     "node"
   ],
-  "author": "Terry Reynolds",
+  "author": "CORE Project Contributors",
   "license": "MIT",
   "engines": {
     "node": ">=16.0.0"

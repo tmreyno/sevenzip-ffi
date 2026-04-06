@@ -19,7 +19,7 @@ Complete guide for building and publishing the 7z compression library as an npm 
 
 2. **Build C Library First**:
    ```bash
-   cd /Users/terryreynolds/GitHub/sevenzip-ffi
+   cd sevenzip-ffi
    
    # Configure CMake
    mkdir -p build
@@ -36,7 +36,7 @@ Complete guide for building and publishing the 7z compression library as an npm 
 ## Local Development Build
 
 ```bash
-cd /Users/terryreynolds/GitHub/sevenzip-ffi/napi
+cd napi
 
 # Install dependencies
 npm install
@@ -192,7 +192,7 @@ jobs:
 ### 1. Prepare for Release
 
 ```bash
-cd /Users/terryreynolds/GitHub/sevenzip-ffi/napi
+cd napi
 
 # Update version
 npm version patch  # or minor, major
@@ -395,5 +395,5 @@ Add to `package.json`:
 **Ready to publish!** 🚀
 
 For issues or questions, see:
-- GitHub: https://github.com/terryreynolds/sevenzip-ffi
+- GitHub: https://github.com/tmreyno/sevenzip-ffi
 - npm: https://www.npmjs.com/package/@sevenzip/napi
